@@ -13,7 +13,7 @@ const emptyResults = document.querySelector('#emptyResults');
 
 const uploaded = sessionStorage.getItem('materialSearchImage');
 function updateSegmentImage(url){document.querySelectorAll('.segment').forEach(segment=>segment.style.setProperty('background-image',`linear-gradient(rgba(255,255,255,.28),rgba(255,255,255,.28)),url("${url}")`,'important'))}
-if (uploaded){sourceImage.src=uploaded;updateSegmentImage(uploaded)}
+if (uploaded){sourceImage.src=uploaded;updateSegmentImage(uploaded)}else{updateSegmentImage(sourceImage.src)}
 
 const objectData = {
   'chair-left': { label:'单椅', box:[10,52,21,38], group:'chair' },
@@ -24,6 +24,24 @@ const objectData = {
   'lamp': { label:'吊灯', box:[52,34,10,17], group:'lamp' },
   'cabinet': { label:'展示柜', box:[64,30,28,34], group:'cabinet' }
 };
+
+let selectedColors=[];
+let selectedPrice={min:null,max:null,label:''};
+let currentResultGroup='whole';
+const resultPriceSamples=[
+  {value:680,text:'¥ 680 /m²'},{value:420,text:'¥ 420–760 /m²'},{value:980,text:'¥ 980 /m²'},
+  {value:260,text:'¥ 260–580 /m²'},{value:110,text:'¥ 110 /m²'},{value:1680,text:'¥ 1,680 /件'},
+  {value:860,text:'¥ 860 /m²'},{value:2180,text:'¥ 2,180 /件'},{value:95,text:'¥ 95–145 /m²'},{value:350,text:'¥ 350 /m²'}
+];
+const resultColorSamples=['米黄色系','深木色系','米黄色系','灰色系','灰色系','棕色系','青色系','白色系','金色系','浅木色系'];
+const colorOptions=[
+  ['彩色系','0.15205443154637677','彩色'],['棕色系','0.35091806977235995','棕色'],['橙色系','0.9827893137045913','橙色'],['浅木色系','0.8516177806173808','浅木色'],
+  ['深木色系','0.909503172102502','深木色'],['灰色系','0.47301614434844175','灰色'],['玫瑰金色系','0.7458446989033465','玫瑰金'],['白色系','0.4956520078629123','白色'],
+  ['米黄色系','0.26186055003883757','米黄色'],['粉色系','0.12017593474223598','粉色'],['紫色系','0.553204933617286','紫色'],['红色系','0.11908648197742533','红色'],
+  ['绿色系','0.49702511431330265','绿色'],['蓝色系','0.38536590341267485','蓝色'],['透明色系','0.43746676520872163','透明'],['金色系','0.8485666110520222','金色'],
+  ['铜色系','0.999137551298718','铜色'],['银色系','0.5144772194771343','银色'],['青色系','0.11636038053577091','青色'],['香槟色系','0.3954473768658373','香槟色'],
+  ['黄色系','0.879583430760146','黄色'],['黑色系','0.7596691084832257','黑色']
+].map(([label,path,name])=>({label,icon:`https://cdn-oss-ideafusion.idea-fusion.com/dev/admin/system/${path}/202351/${name}@2x.png?x-oss-process=image/resize,w_100,m_lfit`}));
 
 const resultGroups = {
   whole:[
@@ -40,10 +58,19 @@ const resultGroups = {
 
 function createSkeletons(){ skeleton.innerHTML=''; for(let i=0;i<8;i++) skeleton.insertAdjacentHTML('beforeend','<div class="skeleton-card"><i></i><span></span><span></span></div>'); }
 createSkeletons();
+function formatResultPrice(text){const parts=text.split(' /');return parts.length>1?`${parts[0]} <small>/${parts[1]}</small>`:text}
 function renderResults(group='whole', delay=0){
+  currentResultGroup=group;
   const items=resultGroups[group]||resultGroups.custom;
   skeleton.classList.add('show'); grid.classList.add('loading');
-  setTimeout(()=>{ grid.innerHTML=''; [...items,...items.slice(0,2)].forEach(([name,brand,similarity,texture])=>{ const card=document.createElement('article'); card.className='result-card'; card.style.setProperty('--texture',texture); card.innerHTML=`<div class="result-photo"></div><div class="result-info"><span class="similarity">相似度 ${similarity}</span><h3>${name}</h3><p>${brand}</p><strong>查看物料详情 ›</strong></div>`; grid.appendChild(card); }); skeleton.classList.remove('show'); grid.classList.remove('loading'); },delay);
+  setTimeout(()=>{
+    grid.innerHTML='';
+    const prepared=[...items,...items.slice(0,2)].map((item,index)=>({item,price:resultPriceSamples[index%resultPriceSamples.length],color:resultColorSamples[index%resultColorSamples.length]}));
+    const filtered=prepared.filter(({price,color})=>(!selectedColors.length||selectedColors.includes(color))&&(selectedPrice.min===null||price.value>=selectedPrice.min)&&(selectedPrice.max===null||price.value<=selectedPrice.max));
+    if(!filtered.length){grid.innerHTML='<div class="filtered-empty"><strong>没有符合条件的物料</strong><span>试试减少色系选择，或放宽价格范围</span></div>'}
+    filtered.forEach(({item,price})=>{const [name,brand,similarity,texture]=item;const card=document.createElement('article');card.className='result-card';card.style.setProperty('--texture',texture);card.innerHTML=`<div class="result-photo"></div><div class="result-info"><span class="similarity">相似度 ${similarity}</span><h3>${name}</h3><p>${brand}</p><strong class="result-price">${formatResultPrice(price.text)}</strong></div>`;grid.appendChild(card)});
+    skeleton.classList.remove('show');grid.classList.remove('loading');
+  },delay);
 }
 renderResults('whole',450);
 
@@ -134,16 +161,32 @@ const demoCategoryTree = [
 ];
 
 const categoryTree = [["石材",[["人造石",["水磨石","合成石","石英石"]],["天然石",["大理石","玉石"]],["石材拼花",[]],["其他",[]]]],["砖",[["通体砖",["防滑砖"]],["构件砖",[]],["玻化砖、抛光砖",[]],["砌块砖",[]],["釉面砖",["仿水磨石砖","仿大理石瓷砖"]],["红砖",[]],["艺术砖",["手工砖","花砖"]],["陶土砖",[]],["仿古砖",[]],["混凝土砖",[]],["砖条",[]],["青砖",[]],["微晶石砖",[]],["瓷片",[]],["岩板",[]],["古砖",[]],["幕墙砖",[]],["户外地砖",[]],["其他",[]]]],["木材",[["木饰面",["天然木皮","科技木皮"]],["防腐木",[]],["板材",[]],["原木",[]],["其他",[]]]],["地板",[["木地板",["木塑地板","复合木地板","强化木地板","竹地板","瓷木复合地板"]],["地胶板",[]],["石晶地板",[]],["橡胶地板",[]],["架空地板",[]],["地板组合",[]],["其他",[]]]],["涂料",[["艺术涂料",[]],["吸音涂料",[]],["乳胶漆",[]],["真石漆",[]],["自流平",[]],["地坪漆",[]],["其他",[]]]],["墙纸",[["布面墙纸",[]],["胶面墙纸",[]],["PVC墙纸",[]],["海基布",[]],["无纺布墙纸",[]],["天然材料墙纸",[]],["纸质墙纸",[]],["喷绘墙纸",[]],["手绘墙纸",[]],["刺绣墙纸",[]],["3D堆墨墙纸",[]],["金箔、银箔墙纸",[]],["其他",[]]]],["玻璃",[["单层玻璃",[]],["夹层玻璃",["夹胶玻璃","夹丝玻璃"]],["艺术玻璃、水晶",[]],["其他",[]]]],["金属",[["铜",[]],["铝",[]],["不锈钢",[]],["特殊金属",["金属网、金属丝"]],["其他",[]]]],["特殊材料",[["塑料",["树脂板"]],["编织材料",["仿藤编"]],["软瓷",[]],["光学材料",[]],["声学材料",[]],["金箔、银箔",[]],["纤维材料",[]],["纸类",[]],["装饰贴膜",[]],["预制板",[]],["马赛克",[]],["液态金属",[]],["PU仿真石",[]],["发泡陶瓷",[]],["其他",[]]]],["面料",[["一般布料",[]],["一般户外布",[]],["耐磨布",[]],["特色面料",[]],["特色户外面料",[]],["丝绸",[]],["皮革",["真皮","人造皮"]]]],["窗帘",[["窗帘布",[]],["窗纱",[]],["卷帘布",[]],["遮光布",[]],["百叶帘",[]],["罗马帘",[]],["窗帘配件",[]],["蜂巢帘",[]],["窗帘电机",[]],["其他",[]]]],["洁具",[["座便器",[]],["龙头",["台出龙头","厨房龙头"]],["地漏",[]],["洁具五金配件",[]],["淋浴组合",[]],["淋浴房",[]],["洗手盆",["厨盆"]],["小便器",[]],["浴缸",[]],["蹲便器",[]],["洁具组合",[]],["其他",[]]]],["五金",[["家具五金",[]],["装饰五金",[]],["门控五金",[]],["五金组合",[]],["其他",[]]]],["工程灯具",[["嵌入式",[]],["嵌墙式",[]],["吸顶类",[]],["线性类",[]],["柔性类",[]],["轨道类",[]],["低压轨道系统",[]],["展柜类",[]],["明装类",[]],["投射类",[]],["壁灯类",[]],["埋地类",[]],["标识类",[]],["线槽类",[]],["矮柱类",[]],["水下类",[]],["洗墙类",[]],["投光类",[]],["地埋类",[]],["线性轮廓类",[]],["壁挂式",[]],["点光类",[]],["雨棚灯",[]],["步道灯",[]],["中、高杆灯",[]],["草坪类",[]],["特殊照明类",[]],["其他",[]]]],["开关面板",[["普通开关面板",[]],["智能开关面板",[]],["配件",[]]]],["镜子",[["普通镜",[]],["银镜",[]],["魔镜",[]],["成品镜",[]],["其他",[]]]],["室内分区",[["隔断",[]],["其他",[]]]],["门窗",[["门",[]],["窗",[]]]],["设备",[["水疗基础设备",[]],["SPA设备",[]],["泳池",[]],["健身器械",[]],["安防设备",[]],["消防设备",[]],["给排水",[]],["光电设备",[]],["暖通",[]],["电梯",[]],["净水设备",[]],["文娱设备",[]],["其他",[]]]],["楼梯及配件",[["楼梯",[]],["栏杆",[]],["楼梯组件",[]],["其他",[]]]],["电器",[["餐厨电器",[]],["卫浴电器",[]],["电暖器具",[]],["生活起居电器",[]],["厨卫小家电",[]],["其他",[]]]],["壁炉及加热器",[["真火壁炉",[]],["装饰壁炉",[]],["壁炉配件",[]],["其他",[]]]],["家具",[["柜类",[]],["几类",["茶几","边几"]],["椅凳",["休闲椅","矮凳"]],["桌类",[]],["床类",[]],["沙发",["多人沙发","单人沙发"]],["活动屏风",[]],["办公家具",[]],["户外家具",[]],["娱乐家具",[]],["家具组合",[]],["其他",[]]]],["装饰灯具",[["台灯",[]],["吊灯",[]],["壁灯",[]],["落地灯",[]],["照画灯",[]],["其他",[]]]],["地毯",[["手工地毯",[]],["机加手地毯",[]],["机织地毯",[]],["移动块毯",[]],["地毯组合",[]],["其他",[]]]],["艺术品",[["挂画",[]],["艺术装置",[]],["其他",[]]]],["艺术家作品",[["水墨",[]],["油画",[]],["摄影",[]],["版画",[]],["雕塑",[]],["水彩",[]],["陶瓷",[]],["综合材料",[]],["纺织艺术",[]],["新媒体艺术",[]],["装置",[]]]],["饰品",[["摆件",[]],["书籍",[]],["餐厨饰品",[]],["卫浴饰品",[]],["植物",[]],["景观材料",[]],["仿真模型",[]],["衣帽间饰品",[]],["饰品组合",[]],["其他",[]]]],["纺织品",[["装饰纺织品",["抱枕"]],["其他",[]]]],["建筑用材",[["基层板",[]]]],["全屋定制",[["收纳系统",[]],["衣帽间系统",[]],["厨房系统",[]],["护墙板系统",[]],["门系统",[]],["色板",[]],["其他",[]]]]];
-const filterBrands=[['GROHE','高仪'],['SieMatic','西曼帝克'],['AUSTROFLAMM','奥地利壁炉'],['LEXINGTON','莱克星顿'],['Baker','贝克家具'],['AXOR','雅生'],['Valcucine','万古奇'],['MIRAGE','米拉珥陶瓷'],['Flos','弗洛斯'],['Kvadrat','克瓦德拉特'],['Minotti','米洛提'],['Poliform','博洛尼夫'],['Rimadesio','瑞玛迪斯奥'],['Vitra','维特拉'],['GUBI','古比'],['Artemide','阿特米德']];
+const filterBrands=[['3M',''],['AUSTROFLAMM','奥地利壁炉'],['AXOR','雅生'],['Artemide','阿特米德'],['B&B Italia',''],['Baker','贝克家具'],['Cappellini','卡佩里尼'],['CEA',''],['Duravit','杜拉维特'],['Edra','埃德拉'],['Flos','弗洛斯'],['GROHE','高仪'],['GUBI','古比'],['Hansgrohe','汉斯格雅'],['HAY',''],['Ideal Standard','理想标准'],['JUNG','永诺'],['Kartell','卡特尔'],['Kvadrat','克瓦德拉特'],['LEXINGTON','莱克星顿'],['Ligne Roset','写意空间'],['MIRAGE','米拉珥陶瓷'],['Minotti','米洛提'],['Molteni&C',''],['Nobilia','柏丽'],['Occhio','奥可乔'],['Poliform','博洛尼夫'],['Porro','波洛'],['Quooker','酷科'],['Rimadesio','瑞玛迪斯奥'],['Roca','乐家'],['SieMatic','西曼帝克'],['Smeg','斯麦格'],['TOTO','东陶'],['USM',''],['Valcucine','万古奇'],['Vitra','维特拉'],['Walter Knoll','沃尔特诺尔'],['XAL',''],['Yabu Pushelberg','雅布'],['Zanotta','扎诺塔']];
 const categoryPopover=document.querySelector('#categoryPopover'),brandPopover=document.querySelector('#brandPopover');
-const categoryButton=document.querySelector('#categoryFilterButton'),brandButton=document.querySelector('#brandFilterButton');
+const categoryButton=document.querySelector('#categoryFilterButton'),brandButton=document.querySelector('#brandFilterButton'),colorButton=document.querySelector('#colorFilterButton'),priceButton=document.querySelector('#priceFilterButton');
+const colorPopover=document.querySelector('#colorPopover'),pricePopover=document.querySelector('#pricePopover');
+const readFilterHistory=(key,fallback)=>{try{const raw=localStorage.getItem(key);if(raw===null)return fallback;const value=JSON.parse(raw);return Array.isArray(value)?value:fallback}catch{return fallback}};
+const saveFilterHistory=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
+const brandName=([en,cn])=>cn||en;
+const findBrand=name=>filterBrands.find(item=>brandName(item)===name);
+const rememberValue=(list,value,limit=6)=>value?[value,...list.filter(item=>item!==value)].slice(0,limit):list;
+const frequentBrandNames=['高仪','西曼帝克','雅生','万古奇','弗洛斯','米洛提'];
+let recentCategories=readFilterHistory('materialRecentCategories',['石材 / 天然石 / 大理石','家具 / 椅凳 / 休闲椅','地毯 / 手工地毯']);
+let recentBrands=readFilterHistory('materialRecentBrands',['高仪','西曼帝克','雅生']);
+let favoriteBrands=readFilterHistory('materialFavoriteBrands',['弗洛斯','万古奇']);
 let activeTop=0,activeSecond=0,selectedCategory='',selectedBrand='';
-function closeFilters(){categoryPopover.classList.remove('open');brandPopover.classList.remove('open');categoryButton.classList.remove('open');brandButton.classList.remove('open')}
+function closeFilters(){categoryPopover.classList.remove('open');brandPopover.classList.remove('open');colorPopover.classList.remove('open');pricePopover.classList.remove('open');categoryButton.classList.remove('open');brandButton.classList.remove('open');colorButton.classList.remove('open');priceButton.classList.remove('open')}
 function toggleFilter(popover,button){const open=popover.classList.contains('open');closeFilters();if(!open){popover.classList.add('open');button.classList.add('open')}}
-categoryButton.addEventListener('click',e=>{e.stopPropagation();if(!categoryPopover.classList.contains('open'))renderAggregatedCategories();toggleFilter(categoryPopover,categoryButton)});brandButton.addEventListener('click',e=>{e.stopPropagation();toggleFilter(brandPopover,brandButton)});
+categoryButton.addEventListener('click',e=>{e.stopPropagation();if(!categoryPopover.classList.contains('open'))renderAggregatedCategories();toggleFilter(categoryPopover,categoryButton)});brandButton.addEventListener('click',e=>{e.stopPropagation();if(!brandPopover.classList.contains('open'))renderBrands(document.querySelector('#brandSearch').value);toggleFilter(brandPopover,brandButton)});
+colorButton.addEventListener('click',e=>{e.stopPropagation();renderColorOptions();toggleFilter(colorPopover,colorButton)});priceButton.addEventListener('click',e=>{e.stopPropagation();renderPriceState();toggleFilter(pricePopover,priceButton)});
 document.addEventListener('click',e=>{if(!e.target.closest('.filter-popover')&&!e.target.closest('.filter-entry'))closeFilters()});
-function applyCategory(path,keepOpen=false){selectedCategory=path;document.querySelector('#categoryFilterText').textContent=path.split(' / ').pop();if(!keepOpen)closeFilters();updateActiveFilters();if(document.querySelector('#categoryOverview'))renderAggregatedCategories();renderResults('whole',620)}
+function renderRecentCategories(){
+  const section=document.querySelector('#categoryRecentSection'),box=document.querySelector('#recentCategoryList');box.innerHTML='';section.classList.toggle('empty',!recentCategories.length);
+  recentCategories.forEach(path=>{const b=document.createElement('button');b.className=`quick-filter-chip${selectedCategory===path?' active':''}`;b.textContent=path;b.title=path;b.onclick=()=>applyCategory(path);box.appendChild(b)});
+}
+function applyCategory(path,keepOpen=false){selectedCategory=path;recentCategories=rememberValue(recentCategories,path);saveFilterHistory('materialRecentCategories',recentCategories);document.querySelector('#categoryFilterText').textContent=path.split(' / ').pop();if(!keepOpen)closeFilters();updateActiveFilters();renderRecentCategories();if(document.querySelector('#categoryOverview'))renderAggregatedCategories();renderResults('whole',620)}
 function renderAggregatedCategories(){
+  document.querySelector('#categoryRecentSection').classList.remove('empty');renderRecentCategories();
   const one=document.querySelector('#categoryLevelOne'),overview=document.querySelector('#categoryOverview');one.innerHTML='';overview.innerHTML='';
   categoryTree.forEach(([name],i)=>{
     const row=document.createElement('div'),selected=selectedCategory===name;row.className=`category-option category-branch${i===activeTop?' active':''}${selected?' selected-filter':''}`;
@@ -155,10 +198,55 @@ function renderAggregatedCategories(){
   const plainGrid=overview.querySelector('.category-plain-grid');plain.forEach(([secondName])=>{const path=`${topName} / ${secondName}`,b=document.createElement('button');b.className=`category-plain-chip${selectedCategory===path?' selected-filter':''}`;b.textContent=secondName;b.onclick=()=>applyCategory(path,false);plainGrid.appendChild(b)});
   const cardGrid=overview.querySelector('.category-card-grid');nested.forEach(([secondName,thirds])=>{const secondPath=`${topName} / ${secondName}`,group=document.createElement('section');group.className=`category-subgroup-card${selectedCategory===secondPath?' selected-filter':''}`;group.innerHTML=`<button class="category-subgroup-head"><span>${secondName}</span><i>筛选此类 ›</i></button><div class="category-leaf-grid"></div>`;group.querySelector('.category-subgroup-head').onclick=()=>applyCategory(secondPath,false);const leafGrid=group.querySelector('.category-leaf-grid');thirds.forEach(name=>{const path=`${secondPath} / ${name}`,b=document.createElement('button');b.className=`category-leaf-chip${selectedCategory===path?' selected-filter':''}`;b.textContent=name;b.onclick=()=>applyCategory(path,false);leafGrid.appendChild(b)});cardGrid.appendChild(group)});
 }
-function applyBrand(name){selectedBrand=name;document.querySelector('#brandFilterText').textContent=name||'全部品牌';closeFilters();updateActiveFilters();renderResults('whole',620)}
-function updateActiveFilters(){const row=document.querySelector('#activeFilterRow');row.innerHTML='';if(selectedCategory)row.insertAdjacentHTML('beforeend',`<span class="active-filter-chip">${selectedCategory}<button data-type="category">×</button></span>`);if(selectedBrand)row.insertAdjacentHTML('beforeend',`<span class="active-filter-chip">${selectedBrand}<button data-type="brand">×</button></span>`);row.classList.toggle('show',!!(selectedCategory||selectedBrand));row.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.type==='category'){selectedCategory='';document.querySelector('#categoryFilterText').textContent='全部分类'}else{selectedBrand='';document.querySelector('#brandFilterText').textContent='全部品牌'}updateActiveFilters();renderResults('whole',500)})}
-function renderBrands(query=''){const box=document.querySelector('#brandFilterGrid');box.innerHTML='';filterBrands.filter(([en,cn])=>(en+cn).toLowerCase().includes(query.toLowerCase())).forEach(([en,cn])=>{const b=document.createElement('button');b.className=`brand-filter-option${selectedBrand===cn?' active':''}`;b.innerHTML=`<strong>${cn}</strong><span>${en}</span>`;b.onclick=()=>applyBrand(cn);box.appendChild(b)})}
+function applyBrand(name){selectedBrand=name;if(name){recentBrands=rememberValue(recentBrands,name);saveFilterHistory('materialRecentBrands',recentBrands)}document.querySelector('#brandFilterText').textContent=name||'全部品牌';closeFilters();updateActiveFilters();renderBrands(document.querySelector('#brandSearch').value);renderResults('whole',620)}
+function syncFilterButtons(){categoryButton.classList.toggle('has-value',!!selectedCategory);brandButton.classList.toggle('has-value',!!selectedBrand);colorButton.classList.toggle('has-value',!!selectedColors.length);priceButton.classList.toggle('has-value',!!selectedPrice.label)}
+function updateActiveFilters(){
+  const row=document.querySelector('#activeFilterRow');row.innerHTML='';
+  if(selectedCategory)row.insertAdjacentHTML('beforeend',`<span class="active-filter-chip">${selectedCategory}<button data-type="category">×</button></span>`);
+  if(selectedBrand)row.insertAdjacentHTML('beforeend',`<span class="active-filter-chip">${selectedBrand}<button data-type="brand">×</button></span>`);
+  if(selectedColors.length)row.insertAdjacentHTML('beforeend',`<span class="active-filter-chip">色系：${selectedColors.length===1?selectedColors[0]:`${selectedColors.length} 项`}<button data-type="color">×</button></span>`);
+  if(selectedPrice.label)row.insertAdjacentHTML('beforeend',`<span class="active-filter-chip">价格：${selectedPrice.label}<button data-type="price">×</button></span>`);
+  row.classList.toggle('show',!!(selectedCategory||selectedBrand||selectedColors.length||selectedPrice.label));syncFilterButtons();
+  row.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.type==='category'){selectedCategory='';document.querySelector('#categoryFilterText').textContent='全部分类'}else if(b.dataset.type==='brand'){selectedBrand='';document.querySelector('#brandFilterText').textContent='全部品牌'}else if(b.dataset.type==='color'){selectedColors=[];document.querySelector('#colorFilterText').textContent='全部色系';renderColorOptions()}else{selectedPrice={min:null,max:null,label:''};document.querySelector('#priceFilterText').textContent='不限价格';renderPriceState()}updateActiveFilters();renderResults(currentResultGroup,350)})
+}
+function toggleFavorite(name){favoriteBrands=favoriteBrands.includes(name)?favoriteBrands.filter(item=>item!==name):[name,...favoriteBrands];saveFilterHistory('materialFavoriteBrands',favoriteBrands);renderBrands(document.querySelector('#brandSearch').value)}
+function renderCompactBrandGroup(id,names,emptyText){
+  const box=document.querySelector(id);box.innerHTML='';const items=names.map(findBrand).filter(Boolean).slice(0,5);if(!items.length){box.innerHTML=`<span class="brand-compact-empty">${emptyText}</span>`;return}
+  items.forEach(item=>{const name=brandName(item),b=document.createElement('button');b.className=`brand-compact-chip${selectedBrand===name?' active':''}`;b.textContent=name;b.title=name;b.onclick=()=>applyBrand(name);box.appendChild(b)});
+}
+function renderBrandDiscovery(){renderCompactBrandGroup('#recentBrandList',recentBrands,'暂无记录');renderCompactBrandGroup('#frequentBrandList',frequentBrandNames,'暂无数据');renderCompactBrandGroup('#favoriteBrandList',favoriteBrands,'暂未收藏')}
+function brandInitial([en]){const initial=(en.trim()[0]||'#').toUpperCase();return /^[A-Z]$/.test(initial)?initial:'#'}
+function createDirectoryBrandButton(item){
+  const [en,cn]=item,name=brandName(item),b=document.createElement('button'),star=document.createElement('button');b.className=`brand-filter-option${selectedBrand===name?' active':''}`;b.innerHTML=`<strong>${name}</strong>${cn&&en?`<span>${en}</span>`:''}`;b.onclick=()=>applyBrand(name);star.className=`brand-favorite-toggle${favoriteBrands.includes(name)?' saved':''}`;star.textContent=favoriteBrands.includes(name)?'★':'☆';star.title=favoriteBrands.includes(name)?'取消收藏':'添加收藏';star.setAttribute('aria-label',star.title);star.onclick=e=>{e.stopPropagation();toggleFavorite(name)};b.appendChild(star);return b;
+}
+function renderBrands(query=''){
+  const q=query.trim().toLowerCase(),shortcuts=document.querySelector('#brandDiscovery'),scroll=document.querySelector('#brandDirectoryScroll'),index=document.querySelector('#brandLetterIndex'),title=document.querySelector('#brandDirectoryTitle'),summary=document.querySelector('#brandSearchSummary');
+  shortcuts.classList.toggle('searching',!!q);renderBrandDiscovery();scroll.innerHTML='';index.innerHTML='';
+  const matches=filterBrands.filter(([en,cn])=>(en+cn).toLowerCase().includes(q)).sort((a,b)=>brandInitial(a).localeCompare(brandInitial(b))||a[0].localeCompare(b[0]));
+  title.textContent=q?'搜索结果':'全部品牌';summary.textContent=q?`找到 ${matches.length} 个相关品牌`:`共 ${filterBrands.length} 个品牌 · 按英文名或拼音首字母排序`;
+  if(!matches.length){index.style.display='none';scroll.innerHTML='<div class="brand-search-empty"><strong>未找到相关品牌</strong><span>请尝试中文名、英文名或其他关键词</span></div>';return}
+  index.style.display='grid';const grouped=new Map();matches.forEach(item=>{const letter=brandInitial(item);if(!grouped.has(letter))grouped.set(letter,[]);grouped.get(letter).push(item)});
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').forEach(letter=>{const b=document.createElement('button'),available=grouped.has(letter);b.className=`brand-letter-button${available?'':' disabled'}`;b.textContent=letter;b.disabled=!available;if(available)b.onclick=()=>{const group=document.querySelector(`#brand-letter-${letter==='#'?'other':letter}`);scroll.scrollTo({top:group.offsetTop,behavior:'smooth'});setActiveLetter(letter)};index.appendChild(b)});
+  grouped.forEach((items,letter)=>{const group=document.createElement('section'),grid=document.createElement('div');group.className='brand-letter-group';group.id=`brand-letter-${letter==='#'?'other':letter}`;group.innerHTML=`<h4 class="brand-letter-heading">${letter}<span>${items.length} 个品牌</span></h4>`;grid.className='brand-letter-grid';items.forEach(item=>grid.appendChild(createDirectoryBrandButton(item)));group.appendChild(grid);scroll.appendChild(group)});
+  const setActiveLetter=letter=>index.querySelectorAll('.brand-letter-button').forEach(b=>b.classList.toggle('active',b.textContent===letter));setActiveLetter(grouped.keys().next().value);
+  scroll.onscroll=()=>{let current=grouped.keys().next().value;scroll.querySelectorAll('.brand-letter-group').forEach(group=>{if(group.offsetTop<=scroll.scrollTop+16)current=group.querySelector('.brand-letter-heading').childNodes[0].textContent.trim()});setActiveLetter(current)};
+}
 document.querySelector('#categoryReset').onclick=()=>{selectedCategory='';document.querySelector('#categoryFilterText').textContent='全部分类';document.querySelector('#categorySearch').value='';updateActiveFilters();renderAggregatedCategories();closeFilters();renderResults('whole',500)};
-document.querySelector('#brandReset').onclick=()=>applyBrand('');document.querySelector('#brandSearch').addEventListener('input',e=>renderBrands(e.target.value));
-document.querySelector('#categorySearch').addEventListener('input',e=>{const q=e.target.value.trim();if(!q){renderAggregatedCategories();return}const one=document.querySelector('#categoryLevelOne'),overview=document.querySelector('#categoryOverview');one.innerHTML='';overview.innerHTML='<div class="category-search-results"></div>';const results=overview.firstElementChild;let count=0;categoryTree.forEach(([top,seconds])=>{if(top.includes(q)){const b=document.createElement('button');b.className='category-search-result';b.textContent=top;b.onclick=()=>applyCategory(top);results.appendChild(b);count++}seconds.forEach(([second,thirds])=>{const secondPath=`${top} / ${second}`;if(second.includes(q)){const b=document.createElement('button');b.className='category-search-result';b.textContent=secondPath;b.onclick=()=>applyCategory(secondPath);results.appendChild(b);count++}thirds.forEach(third=>{if(third.includes(q)){const path=`${secondPath} / ${third}`,b=document.createElement('button');b.className='category-search-result';b.textContent=path;b.onclick=()=>applyCategory(path);results.appendChild(b);count++}})})});if(!count)overview.innerHTML='<div class="category-overview-empty">未找到相关分类</div>'});
-renderAggregatedCategories();renderBrands();
+document.querySelector('#brandReset').onclick=()=>{document.querySelector('#brandSearch').value='';applyBrand('');renderBrands()};document.querySelector('#brandSearch').addEventListener('input',e=>renderBrands(e.target.value));
+document.querySelector('#categorySearch').addEventListener('input',e=>{const q=e.target.value.trim(),recentSection=document.querySelector('#categoryRecentSection');if(!q){recentSection.classList.remove('empty');renderAggregatedCategories();return}recentSection.classList.add('empty');const one=document.querySelector('#categoryLevelOne'),overview=document.querySelector('#categoryOverview');one.innerHTML='';overview.innerHTML='<div class="category-search-results"></div>';const results=overview.firstElementChild;let count=0;categoryTree.forEach(([top,seconds])=>{if(top.includes(q)){const b=document.createElement('button');b.className='category-search-result';b.textContent=top;b.onclick=()=>applyCategory(top);results.appendChild(b);count++}seconds.forEach(([second,thirds])=>{const secondPath=`${top} / ${second}`;if(second.includes(q)){const b=document.createElement('button');b.className='category-search-result';b.textContent=secondPath;b.onclick=()=>applyCategory(secondPath);results.appendChild(b);count++}thirds.forEach(third=>{if(third.includes(q)){const path=`${secondPath} / ${third}`,b=document.createElement('button');b.className='category-search-result';b.textContent=path;b.onclick=()=>applyCategory(path);results.appendChild(b);count++}})})});if(!count)overview.innerHTML='<div class="category-overview-empty">未找到相关分类</div>'});
+function renderColorOptions(){
+  const box=document.querySelector('#colorFilterGrid');box.innerHTML='';
+  colorOptions.forEach(item=>{const button=document.createElement('button');button.className=`color-filter-option${selectedColors.includes(item.label)?' active':''}`;button.dataset.label=item.label;button.setAttribute('aria-pressed',selectedColors.includes(item.label));button.innerHTML=`<img src="${item.icon}" alt="" /><span>${item.label}</span>`;button.onclick=e=>{e.stopPropagation();selectedColors=selectedColors.includes(item.label)?selectedColors.filter(label=>label!==item.label):[...selectedColors,item.label];document.querySelector('#colorFilterText').textContent=selectedColors.length?selectedColors.length===1?selectedColors[0]:`${selectedColors.length} 项色系`:'全部色系';renderColorOptions();updateActiveFilters();renderResults(currentResultGroup,280)};box.appendChild(button)});
+  document.querySelector('#colorSelectionSummary').textContent=selectedColors.length?`已选择 ${selectedColors.length} 个色系`:'未选择色系';
+}
+function applyPriceRange(min,max,label){selectedPrice={min,max,label};document.querySelector('#priceFilterText').textContent=label||'不限价格';document.querySelector('#priceHelper').textContent='可选择常用区间，或输入自定义价格';document.querySelector('#priceHelper').classList.remove('error');renderPriceState();updateActiveFilters();renderResults(currentResultGroup,300)}
+function renderPriceState(){
+  document.querySelectorAll('#pricePresetGrid button').forEach(button=>{const min=button.dataset.min===''?null:Number(button.dataset.min),max=button.dataset.max===''?null:Number(button.dataset.max);button.classList.toggle('active',selectedPrice.min===min&&selectedPrice.max===max&&((!selectedPrice.label&&min===null&&max===null)||selectedPrice.label===button.textContent))});
+}
+document.querySelector('#colorReset').onclick=()=>{selectedColors=[];document.querySelector('#colorFilterText').textContent='全部色系';renderColorOptions();updateActiveFilters();renderResults(currentResultGroup,300)};
+document.querySelector('#colorDone').onclick=closeFilters;
+document.querySelector('#pricePresetGrid').addEventListener('click',e=>{const button=e.target.closest('button');if(!button)return;const min=button.dataset.min===''?null:Number(button.dataset.min),max=button.dataset.max===''?null:Number(button.dataset.max),label=min===null&&max===null?'':button.textContent;document.querySelector('#minPriceInput').value='';document.querySelector('#maxPriceInput').value='';applyPriceRange(min,max,label);closeFilters()});
+document.querySelector('#priceReset').onclick=()=>{document.querySelector('#minPriceInput').value='';document.querySelector('#maxPriceInput').value='';applyPriceRange(null,null,'')};
+document.querySelectorAll('#minPriceInput,#maxPriceInput').forEach(input=>input.addEventListener('input',()=>{input.value=input.value.replace(/\D/g,'').slice(0,8)}));
+document.querySelector('#priceConfirm').onclick=()=>{const minValue=document.querySelector('#minPriceInput').value,maxValue=document.querySelector('#maxPriceInput').value,min=minValue===''?null:Number(minValue),max=maxValue===''?null:Number(maxValue),helper=document.querySelector('#priceHelper');if(min!==null&&max!==null&&min>max){helper.textContent='最低价不能高于最高价';helper.classList.add('error');return}const label=min!==null&&max!==null?`¥${min}–${max}`:min!==null?`¥${min} 以上`:max!==null?`¥${max} 以下`:'';applyPriceRange(min,max,label);closeFilters()};
+renderAggregatedCategories();renderBrands();renderColorOptions();renderPriceState();updateActiveFilters();
