@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="兆材云库找物料首页演示" />
+  <title>找物料 - 兆材云库</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="#" aria-label="兆材云库首页">
+        <span class="brand-mark"><i></i><b></b></span>
+        <span>兆材云库</span>
+      </a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="#">首页</a>
+        <a class="active" href="#materials">找物料</a>
+        <a href="#cases">看案例</a>
+        <a href="#selection">新材速递</a>
+        <a href="#projects">做项目</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="member-btn"><span>◆</span> 开通会员 选品无忧</button>
+        <button class="plain-btn">中国站⌄</button>
+        <button class="plain-btn">CNY⌄</button>
+        <button class="plain-btn">简体⌄</button>
+        <button class="icon-btn" aria-label="消息">•••</button>
+        <button class="icon-btn bell" aria-label="通知">♢</button>
+        <div class="avatar" aria-label="个人中心">Z</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="search-section" id="materials">
+      <div class="search-row">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/></svg>
+          <input id="searchInput" type="search" placeholder="搜索物料、品牌、型号、颜色或描述，如：浅灰大理石、意大利进口岩板" />
+          <button class="image-search" title="上传图片搜索"><span>▣</span> 以图搜图</button>
+        </div>
+        <button class="search-btn" id="searchBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/></svg>
+          搜索
+        </button>
+      </div>
+      <div class="search-dropdown" id="searchDropdown" aria-hidden="true">
+        <div class="dropdown-head">
+          <div>
+            <h2>用图片找物料</h2>
+            <p>上传图片，快速查找同款或相似材料</p>
+          </div>
+          <button class="dropdown-close" id="dropdownClose" aria-label="关闭">×</button>
+        </div>
+        <div class="image-search-layout">
+          <label class="drop-zone" id="dropZone" for="imageFile">
+            <input id="imageFile" type="file" accept="image/*" hidden />
+            <div class="upload-icon">↑</div>
+            <strong>选择图片或将图片拖到此处</strong>
+            <span>也可以直接按 Ctrl + V 粘贴剪贴板图片</span>
+          </label>
+        </div>
+        <div class="url-search-row">
+          <span>或</span>
+          <div><input id="imageUrl" type="url" placeholder="粘贴图片地址，如 https://example.com/material.jpg" /><button id="urlSearchBtn">搜索</button></div>
+        </div>
+        <div class="history-section">
+          <div class="history-head"><h3>搜索历史</h3><button id="clearHistory">清空</button></div>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </div>
+      <div class="hot-search">
+        <strong>搜索热搜：</strong>
+        <button>微水泥</button><button>长虹玻璃</button><button>木饰面</button><button>岩板</button><button>艺术漆</button><button>大理石</button>
+      </div>
+    </section>
+
+    <section class="hero hero-theme-0" id="hero" aria-label="主题推广" tabindex="0">
+      <div class="hero-copy">
+        <p class="eyebrow" id="heroEyebrow">2026 MATERIAL TREND</p>
+        <h2 id="heroTitle">灵感 <span>×</span> 材料&nbsp; 全新场景美学</h2>
+        <p id="heroSubtitle">让设计落地更简单</p>
+        <a id="heroButton" href="trend.html">探索风格场景 <b>›</b></a>
+      </div>
+      <div class="hero-room" aria-hidden="true">
+        <div class="sun"></div><div class="panel p1"></div><div class="panel p2"></div>
+        <div class="sofa"><i></i><i></i><i></i></div>
+        <div class="table"><i></i></div><div class="vase">♧</div>
+      </div>
+      <div class="hero-dots" id="heroDots"><button class="active" aria-label="第 1 张"></button><button aria-label="第 2 张"></button><button aria-label="第 3 张"></button><button aria-label="第 4 张"></button></div>
+    </section>
+
+    <section class="content-section category-section">
+      <div class="section-heading">
+        <div><h2>按物料分类找</h2></div>
+      </div>
+      <div class="category-grid" id="categoryGrid"></div>
+    </section>
+
+    <section class="content-section brand-section" id="cases">
+      <div class="section-heading">
+        <div><h2>推荐品牌</h2></div>
+        <button class="text-link">查看全部品牌 <span>›</span></button>
+      </div>
+      <div class="brand-grid" id="brandGrid"></div>
+    </section>
+
+    <section class="content-section selection-section" id="selection">
+      <div class="section-heading filter-heading">
+        <div><h2>精选物料</h2></div>
+        <div class="filters" id="filters">
+          <button class="active" data-filter="all">综合推荐</button>
+          <button data-filter="new">新品</button>
+          <button data-filter="popular">热门</button>
+          <button data-filter="eco">环保优选</button>
+        </div>
+      </div>
+      <div class="material-grid" id="materialGrid"></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+  <button class="back-top" id="backTop" aria-label="返回顶部">↑</button>
+  <script src="script.js"></script>
+</body>
+</html>

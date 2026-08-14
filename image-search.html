@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>以图搜图 - 兆材云库</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="image-search.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="index.html"><span class="brand-mark"><i></i><b></b></span><span>兆材云库</span></a>
+      <nav class="main-nav"><a href="index.html">首页</a><a class="active" href="index.html">找物料</a><a href="#">看案例</a><a href="#">新材速递</a><a href="#">做项目</a></nav>
+      <div class="nav-actions"><button class="member-btn"><span>◆</span> 开通会员 选品无忧</button><button class="plain-btn">中国站⌄</button><button class="plain-btn">CNY⌄</button><div class="avatar">Z</div></div>
+    </div>
+  </header>
+
+  <main class="visual-search-page">
+    <div class="visual-topbar">
+      <a class="visual-back" href="index.html">←</a>
+      <div class="visual-input-wrap" id="visualInputWrap">
+        <div class="visual-search-input"><span>▣</span><input id="imageLinkInput" type="url" placeholder="粘贴图片链接，或点击上传图片" /><button class="clear-current show" id="clearCurrent" aria-label="删除当前图片">×</button></div>
+        <div class="visual-upload-dropdown" id="visualUploadDropdown">
+          <label class="visual-drop-zone" id="visualDropZone"><input id="replaceFile" type="file" accept="image/*" hidden /><i>↑</i><strong>选择图片或将图片拖到此处</strong><span>也可以直接按 Ctrl + V 粘贴图片</span></label>
+        </div>
+      </div>
+      <button class="visual-search-button" id="linkSearchButton">搜索</button>
+    </div>
+
+    <div class="visual-layout">
+      <aside class="source-panel">
+        <div class="source-heading"><h1>以图搜物料</h1><button id="wholeImageButton" class="whole-image-button active">整图搜索</button></div>
+        <div class="image-stage" id="imageStage">
+          <img id="sourceImage" src="search-demo-room.jpg" alt="用于以图搜图的室内空间" draggable="false" />
+          <div class="segment-reveal" id="segmentReveal">
+            <button class="segment segment-chair-left" data-object="chair-left" aria-label="左侧单椅"></button>
+            <button class="segment segment-sofa" data-object="sofa" aria-label="沙发"></button>
+            <button class="segment segment-table" data-object="table" aria-label="茶几"></button>
+            <button class="segment segment-chair-right" data-object="chair-right" aria-label="右侧休闲椅"></button>
+            <button class="segment segment-rug" data-object="rug" aria-label="地毯"></button>
+            <button class="segment segment-lamp" data-object="lamp" aria-label="吊灯"></button>
+            <button class="segment segment-cabinet" data-object="cabinet" aria-label="展示柜"></button>
+          </div>
+          <div class="empty-image-state" id="emptyImageState"><i>▧</i><strong>添加图片开始搜索</strong><span>支持上传、拖拽、粘贴图片或图片链接</span></div>
+          <div class="selection-box object-box" id="objectBox"></div>
+          <div class="selection-box custom-box" id="customBox"></div>
+        </div>
+      </aside>
+
+      <section class="result-panel">
+        <div class="result-heading">
+          <div><h2>识图结果</h2><p>基于颜色、材质与空间特征匹配</p></div>
+          <div class="filter-entry-wrap">
+            <button class="filter-entry" id="categoryFilterButton"><span>分类</span><strong id="categoryFilterText">全部分类</strong><i>⌄</i></button>
+            <button class="filter-entry" id="brandFilterButton"><span>品牌</span><strong id="brandFilterText">全部品牌</strong><i>⌄</i></button>
+          </div>
+        </div>
+        <div class="active-filter-row" id="activeFilterRow"></div>
+        <div class="filter-popover category-popover" id="categoryPopover">
+          <div class="popover-header"><div class="filter-search"><span>⌕</span><input id="categorySearch" placeholder="搜索分类" /></div><button class="filter-reset" id="categoryReset">重置</button></div>
+          <div class="category-columns category-aggregate">
+            <div class="category-level category-level-one" id="categoryLevelOne"></div>
+            <div class="category-overview" id="categoryOverview"></div>
+          </div>
+        </div>
+        <div class="filter-popover brand-popover" id="brandPopover">
+          <div class="popover-header"><div class="filter-search"><span>⌕</span><input id="brandSearch" placeholder="搜索品牌名称" /></div><button class="filter-reset" id="brandReset">重置</button></div>
+          <div class="brand-filter-grid" id="brandFilterGrid"></div>
+        </div>
+        <div class="skeleton-grid" id="skeletonGrid"></div>
+        <div class="visual-result-grid" id="visualResultGrid"></div>
+        <div class="empty-results" id="emptyResults"><i>▦</i><strong>暂无搜索内容</strong><span>添加图片后，相关物料会展示在这里</span></div>
+      </section>
+    </div>
+  </main>
+  <script src="image-search.js"></script>
+</body>
+</html>
