@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="兆材云库单品图找物料与空间图找物料交互 Demo" />
+  <title>图片找物料 - 兆材云库 Demo</title>
+  <link rel="stylesheet" href="styles.css?v=20260822-5" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <button class="brand" id="brandHome" aria-label="返回找物料 Demo 首页">
+        <span class="brand-mark" aria-hidden="true"><i></i></span>
+        <strong>兆材云库</strong>
+      </button>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="#">首页</a>
+        <a class="active" href="#" aria-current="page">找物料</a>
+        <a href="#">看案例</a>
+        <a href="#">新材速递</a>
+        <a href="#">做项目</a>
+      </nav>
+      <div class="header-actions">
+        <button class="member-button"><span aria-hidden="true">◆</span> 开通会员 选品无忧</button>
+        <button class="text-action">中国站⌄</button>
+        <button class="text-action">CNY⌄</button>
+        <button class="icon-button" aria-label="消息">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/><circle cx="9" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="15" cy="11" r="1"/></svg>
+        </button>
+        <span class="avatar" aria-label="个人中心">Z</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="landing-view" id="landingView" aria-labelledby="landingTitle">
+      <div class="materials-shell">
+        <aside class="material-sidebar" aria-label="物料分类筛选">
+          <button class="materials-list-entry" id="materialsListEntry" type="button" aria-label="进入空间图找物料">
+            <span class="materials-list-entry-image" aria-hidden="true">
+              <i class="entry-detect-box entry-detect-box-a"></i>
+              <i class="entry-detect-box entry-detect-box-b"></i>
+              <i class="entry-list-sheet"></i>
+            </span>
+            <span class="materials-list-entry-copy">
+              <strong>空间图找物料</strong>
+              <small>识别空间中的物体，查找对应物料</small>
+              <b>开始找物料 <span aria-hidden="true">→</span></b>
+            </span>
+          </button>
+          <div class="sidebar-title"><h1 id="landingTitle">分类</h1><span aria-hidden="true">⌃</span></div>
+          <label class="sidebar-search">
+            <span class="sr-only">搜索分类</span>
+            <input type="search" placeholder="关键字搜索" autocomplete="off" />
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+          </label>
+          <ul class="category-menu" aria-label="一级分类">
+            <li><i></i><span>石材</span></li><li><i></i><span>砖</span></li><li><i></i><span>木材</span></li>
+            <li><i></i><span>地板</span></li><li><i></i><span>涂料</span></li><li><i></i><span>墙纸</span></li>
+          </ul>
+          <div class="sidebar-groups" aria-label="更多筛选">
+            <div><strong>色系</strong><span>⌄</span></div><div><strong>品牌</strong><span>⌄</span></div>
+            <div><strong>价格</strong><span>⌄</span></div><div><strong>国产/进口品牌</strong><span>⌄</span></div>
+            <div><strong>新材料</strong><span>⌄</span></div><div><strong>服务区域</strong><span>⌄</span></div>
+          </div>
+        </aside>
+
+        <div class="material-catalog">
+          <form class="keyword-search" id="keywordForm">
+            <label class="sr-only" for="keywordInput">搜索物料</label>
+            <input id="keywordInput" type="search" placeholder="请输入物料名称、品牌或型号" autocomplete="off" />
+            <button class="keyword-submit" type="submit" aria-label="搜索">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+            </button>
+            <button class="image-search-trigger" id="bannerUpload" type="button" aria-label="进入单品图找物料">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="m5.5 17 4.3-4.2 3.1 3 2.2-2 3.4 3.2"/></svg>
+              <span>单品图找物料</span>
+            </button>
+          </form>
+
+          <div class="catalog-toolbar">
+            <p>共为您找到 <strong>17,892</strong> 款相关物料</p>
+            <div aria-label="物料列表操作"><button type="button">价格：从低到高 <span>⌄</span></button><button type="button" class="refresh-button" aria-label="刷新物料">↻</button></div>
+          </div>
+          <div class="landing-grid" id="landingGrid" aria-label="物料列表"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="search-view" id="searchView" aria-label="图片找物料结果" hidden>
+      <div class="search-shell">
+        <div class="workspace">
+          <section class="image-column" aria-label="上传图片工作区">
+            <div class="upload-row">
+              <button class="back-button" id="backButton" aria-label="返回找物料入口">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
+              </button>
+              <div class="file-chip" id="fileChip">
+                <img id="fileThumb" src="assets/room-v2.png" alt="" width="42" height="34" />
+                <label class="sr-only" for="imageSourceInput">图片或图片链接</label>
+                <input id="imageSourceInput" type="text" placeholder="请粘贴图片或者图片的链接" autocomplete="off" spellcheck="false" />
+                <button class="clear-file" id="clearFile" type="button" aria-label="清除当前图片">×</button>
+              </div>
+              <button class="search-button" id="searchButton" type="button">搜索</button>
+            </div>
+            <div class="image-source-strip" id="imageSourceStrip" aria-label="物料清单图片集" hidden></div>
+            <div class="image-stage" id="imageStage" tabindex="0" aria-label="已上传图片，可拖拽框选局部重新搜索">
+              <div class="image-canvas" id="imageCanvas">
+                <img id="sourceImage" src="assets/room-v2.png" alt="已上传的客厅室内效果图" draggable="false" />
+                <div class="recognition-highlight" id="recognitionHighlight" aria-hidden="true"></div>
+                <div class="manual-selection" id="manualSelection" aria-hidden="true"></div>
+                <div class="ai-extraction-highlight" id="aiExtractionHighlight" aria-hidden="true"><i></i></div>
+              </div>
+              <div class="canvas-ai-menu" id="canvasAiMenu" hidden>
+                <button class="canvas-ai-trigger" type="button" aria-label="AI提取选项">AI</button>
+                <div class="canvas-ai-actions">
+                  <button type="button" data-ai-type="furniture">AI家具提取</button>
+                  <button type="button" data-ai-type="material">AI材质提取</button>
+                </div>
+              </div>
+              <div class="zoom-controls" id="zoomControls" aria-label="图片缩放" hidden>
+                <button type="button" id="zoomOut" aria-label="缩小图片">−</button>
+                <button type="button" id="zoomReset" aria-label="恢复默认缩放">100%</button>
+                <button type="button" id="zoomIn" aria-label="放大图片">＋</button>
+              </div>
+              <button class="empty-upload" id="emptyUpload" type="button" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5M8 9l4-4 4 4"/><path d="M5 13v6h14v-6"/></svg>
+                <strong id="emptyUploadTitle">上传单品图片</strong>
+                <span id="emptyUploadHint">点击选择，或将单品图片拖拽到这里</span>
+              </button>
+            </div>
+            <form class="empty-link-entry" id="uploadLinkForm" hidden>
+              <label class="sr-only" id="uploadLinkLabel" for="uploadLinkInput">单品图片链接</label>
+              <input id="uploadLinkInput" type="text" inputmode="url" placeholder="粘贴单品图片链接" autocomplete="off" spellcheck="false" />
+              <button id="uploadLinkSubmit" type="submit">查找相似物料</button>
+            </form>
+            <section class="ai-results-panel" id="aiResultsPanel" aria-labelledby="aiResultsTitle" hidden>
+              <header><strong id="aiResultsTitle">AI提取结果</strong><span id="aiResultsCount">0</span></header>
+              <div class="ai-results-list" id="aiResultsList"></div>
+            </section>
+          </section>
+
+          <section class="results-column" aria-label="搜索结果">
+            <section class="upload-guide" id="uploadGuide" aria-labelledby="uploadGuideTitle" hidden>
+              <span class="guide-kicker" id="uploadGuideKicker">单品图找物料</span>
+              <h2 id="uploadGuideTitle">用一张单品图，查找同款与相似物料</h2>
+              <p id="uploadGuideDescription">适合家具、灯具、饰品等主体清晰的产品图片。</p>
+              <ol class="guide-steps" id="uploadGuideSteps"></ol>
+              <p class="guide-result-note">上传后，搜索结果将在这里展示</p>
+            </section>
+            <div class="result-purpose-switch" id="resultPurposeSwitch" role="group" aria-label="图片搜索用途">
+              <span>当前用途</span>
+              <div>
+                <button id="purposeMaterials" type="button">空间图找物料</button>
+                <button id="purposeSimilar" type="button">单品图找物料</button>
+              </div>
+            </div>
+            <div class="object-meta-row">
+              <div class="recognition-summary" aria-live="polite">
+                <strong id="recognitionCount">已识别 0 个物体</strong>
+                <span id="recognitionMessage">可选择物体查看相似物料</span>
+              </div>
+              <label class="demo-state-switcher" for="demoStateSelect">
+                <span>演示状态</span>
+                <select id="demoStateSelect">
+                  <option value="recognized">正常展示</option>
+                  <option value="empty">未识别到物体</option>
+                  <option value="overflow">识别内容较多</option>
+                </select>
+              </label>
+            </div>
+            <div class="object-header">
+              <div class="object-rail">
+                <div class="object-scroller" id="objectScroller" role="tablist" aria-label="识别对象"></div>
+                <div class="object-guide" id="objectGuide" role="status" hidden>
+                  <span>选择识别物体，快速查找对应物料</span>
+                  <button id="objectGuideClose" type="button" aria-label="关闭识别物体指引">×</button>
+                </div>
+              </div>
+              <div class="object-actions">
+                <button class="batch-favorite" id="batchFavorite" type="button" disabled>
+                  批量收藏 <strong id="batchFavoriteCount" aria-label="已选择 0 项">0</strong>
+                </button>
+                <button class="selected-entry" id="selectedEntry" type="button" aria-haspopup="dialog" aria-controls="selectedDrawer">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v15H5z"/><path d="M8 3h8v4H8zM8 11h8M8 15h5"/></svg>
+            物料清单 <strong id="selectedTotal">0</strong>
+                </button>
+              </div>
+            </div>
+
+            <div class="mode-row" id="modeRow" hidden>
+              <div class="mode-tabs" role="tablist" aria-label="搜索模式">
+                <button class="active" id="similarMode" type="button" role="tab" aria-selected="true">相似物料</button>
+                <button id="materialMode" type="button" role="tab" aria-selected="false">找面料/材质</button>
+              </div>
+            </div>
+
+            <div class="filter-row" id="filterRow">
+              <button class="filter-button" id="categoryFilter" type="button" aria-expanded="false"><span>分类</span><strong id="categoryValue">全部分类</strong><i></i></button>
+              <button class="filter-button" id="brandFilter" type="button" aria-expanded="false"><span>品牌</span><strong id="brandValue">全部品牌</strong><i></i></button>
+              <button class="filter-button" id="colorFilter" type="button" aria-expanded="false"><span>色系</span><strong id="colorValue">全部色系</strong><i></i></button>
+              <button class="filter-button" id="priceFilter" type="button" aria-expanded="false"><span>价格</span><strong id="priceValue">不限价格</strong><i></i></button>
+            </div>
+
+            <div class="active-filters" id="activeFilters" aria-live="polite"></div>
+            <div class="filter-popover" id="filterPopover" hidden></div>
+
+            <div class="results-status" id="resultsStatus" role="status" aria-live="polite"></div>
+            <div class="product-grid" id="productGrid"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <input id="imageFile" type="file" accept="image/*" hidden />
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="selected-drawer" id="selectedDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true" inert hidden>
+    <header class="drawer-header">
+      <div><h2 id="drawerTitle">物料清单（<span id="drawerTotal">0</span>）</h2></div>
+      <button class="drawer-close" id="drawerClose" type="button" aria-label="关闭物料清单">×</button>
+    </header>
+    <div class="drawer-content" id="drawerContent"></div>
+    <footer class="drawer-footer">
+      <span class="export-button-wrap is-empty" id="exportButtonWrap" title="请先选择至少一项物料">
+        <button class="export-button" id="exportButton" type="button" aria-describedby="exportHint" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+          <span>导出物料清单</span>
+        </button>
+      </span>
+      <p id="exportHint">请先选择至少一项物料</p>
+    </footer>
+  </aside>
+
+  <div class="library-modal-backdrop" id="libraryModalBackdrop" hidden></div>
+  <section class="library-modal" id="libraryModal" role="dialog" aria-modal="true" aria-labelledby="libraryModalTitle" aria-describedby="libraryModalDescription" aria-hidden="true" inert hidden>
+    <header>
+      <div><h2 id="libraryModalTitle">加入物料库</h2><p id="libraryModalDescription">为当前物料选择保存分组</p></div>
+      <button id="libraryModalClose" type="button" aria-label="关闭加入物料库弹窗">×</button>
+    </header>
+    <p class="library-product" id="libraryProductName"></p>
+    <label class="library-group-field" for="libraryGroup">
+      <span><i aria-hidden="true">*</i> 选择分组</span>
+      <select id="libraryGroup">
+        <option value="">请选择分组</option>
+        <option value="project-lighting">工程灯具测试分组</option>
+        <option value="default">默认分组</option>
+        <option value="soft-decoration">项目软装物料</option>
+        <option value="temporary">临时选材</option>
+      </select>
+    </label>
+  </section>
+
+  <div class="exit-modal-backdrop" id="exitModalBackdrop" hidden></div>
+  <section class="exit-modal" id="exitModal" role="dialog" aria-modal="true" aria-labelledby="exitModalTitle" aria-describedby="exitModalDescription" aria-hidden="true" inert hidden>
+    <h2 id="exitModalTitle">确认退出？</h2>
+    <p id="exitModalDescription">退出后，本次已添加的物料和 AI 提取结果将不会保存。</p>
+    <div>
+      <button class="exit-cancel" id="exitCancel" type="button">取消</button>
+      <button class="exit-confirm" id="exitConfirm" type="button">确认退出</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="exceljs.min.js?v=4.4.0"></script>
+  <script src="app.js?v=20260822-6"></script>
+  <script src="export-materials.js?v=20260821-1"></script>
+  <script src="./result-pipeline.js?v=20260821-1"></script>
+</body>
+</html>
