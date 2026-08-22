@@ -21,6 +21,7 @@ const overflowObjects = [
 
 const products = {
   whole:[
+    ['whole-black-chair','黑色弧背休闲椅','Minotti','¥ 9,680',9680,'sofa','#dedbd7','#292827','家具','黑色系'],
     ['whole-sofa','米洛弧形沙发组合','HC28','¥ 8,960',8960,'sofa','#eee9e3','#d9d2ca','家具','米黄色系'],
     ['whole-rug','几何边框羊毛地毯','WEI Studio','¥ 3,260',3260,'rug','#ded8cf','#b99075','地毯','棕色系'],
     ['whole-table','圆形大理石茶几','Poliform','¥ 6,480',6480,'table','#ece9e4','#a9a198','家具','白色系'],
@@ -138,7 +139,9 @@ const state = {
   objectGuideShown:false, objectGuideVisible:false, objectGuideTimer:null, demoState:'recognized',
   imageSources:[], currentSourceId:null, sourceCounter:0, pendingAddSource:false,
   groupMeta:new Map(), aiResults:[], activeAiResultId:null, aiResultCounter:0, manualCounter:0,
-  imageZoom:1, zoomOrigin:{x:50,y:50}, purposeBackup:null
+  imageZoom:1, zoomOrigin:{x:50,y:50}, purposeBackup:null,
+  otherSearchDraft:'', otherSearchQuery:'', otherSearchTimer:null,
+  modeFilterState:{similar:null,other:null}
 };
 
 const $ = selector => document.querySelector(selector);
@@ -182,7 +185,8 @@ function sourceSnapshot(){
     recognitionStatus:state.recognitionStatus,objects:state.objects,selectedObjectId:state.selectedObjectId,
     manualSelection:state.manualSelection,searchMode:state.searchMode,resultsMode:state.resultsMode,
     selectedGroups:state.selectedGroups,groupMeta:state.groupMeta,aiResults:state.aiResults,
-    activeAiResultId:state.activeAiResultId,aiResultCounter:state.aiResultCounter,manualCounter:state.manualCounter
+    activeAiResultId:state.activeAiResultId,aiResultCounter:state.aiResultCounter,manualCounter:state.manualCounter,
+    otherSearchDraft:state.otherSearchDraft,otherSearchQuery:state.otherSearchQuery
     ,imageZoom:state.imageZoom,zoomOrigin:{...state.zoomOrigin}
   };
 }
@@ -197,7 +201,7 @@ function createImageSource(url,name,inputValue=name){
   const id=`source-${++state.sourceCounter}`;
   return {id,name:name||`效果图 ${state.sourceCounter}`,url,inputValue,recognitionStatus:'loading',objects:[],selectedObjectId:null,
     manualSelection:null,searchMode:'similar',resultsMode:'whole',selectedGroups:new Map(),groupMeta:new Map(),aiResults:[],
-    activeAiResultId:null,aiResultCounter:0,manualCounter:0,imageZoom:1,zoomOrigin:{x:50,y:50}};
+    activeAiResultId:null,aiResultCounter:0,manualCounter:0,otherSearchDraft:'',otherSearchQuery:'',imageZoom:1,zoomOrigin:{x:50,y:50}};
 }
 
 function renderImageSources(){
@@ -230,6 +234,7 @@ function loadImageSource(id){
   state.manualSelection=source.manualSelection;state.searchMode=source.searchMode;state.resultsMode=source.resultsMode;
   state.selectedGroups=source.selectedGroups;state.groupMeta=source.groupMeta;state.aiResults=source.aiResults;
   state.activeAiResultId=source.activeAiResultId;state.aiResultCounter=source.aiResultCounter;state.manualCounter=source.manualCounter;
+  state.otherSearchDraft=source.otherSearchDraft||'';state.otherSearchQuery=source.otherSearchQuery||'';
   state.imageZoom=source.imageZoom||1;state.zoomOrigin=source.zoomOrigin||{x:50,y:50};
   sourceImage.src=source.url;sourceImage.alt=`已上传图片：${source.name}`;$('#fileThumb').src=source.url;
   $('#imageSourceInput').value=source.inputValue||source.name;
@@ -293,6 +298,17 @@ function resetFilters(){
   updateFilterLabels();
 }
 
+function filterStateSnapshot(){
+  return {filters:{...state.filters,color:Array.isArray(state.filters.color)?[...state.filters.color]:state.filters.color,price:{...state.filters.price}},sort:state.sort};
+}
+
+function restoreModeFilters(mode){
+  const saved=state.modeFilterState[mode];
+  if(!saved){resetFilters();return;}
+  state.filters={...saved.filters,color:Array.isArray(saved.filters.color)?[...saved.filters.color]:saved.filters.color,price:{...saved.filters.price}};
+  state.sort=saved.sort;updateFilterLabels();
+}
+
 function resetSearchState({preserveCollection=false}={}){
   clearTimeout(state.recognitionTimer);
   clearTimeout(state.resultTimer);
@@ -308,6 +324,8 @@ function resetSearchState({preserveCollection=false}={}){
   state.activeAiResultId = null;
   state.aiResultCounter = 0;
   state.manualCounter = 0;
+  state.otherSearchDraft='';state.otherSearchQuery='';clearTimeout(state.otherSearchTimer);state.otherSearchTimer=null;
+  state.modeFilterState={similar:null,other:null};
   clearTimeout(state.objectGuideTimer);
   state.objectGuideVisible=false;
   if(!preserveCollection)state.objectGuideShown=false;
@@ -552,7 +570,7 @@ function startUrlSearch(rawUrl,intent='similar',triggerButton=$('#searchButton')
 }
 
 function renderLandingCards(){
-  const list = [...products.whole,...products.material.slice(0,4)].map(productFromRow);
+  const list = landingCatalogProducts();
   const grid = $('#landingGrid');
   grid.innerHTML = '';
   list.forEach(item=>{
@@ -592,6 +610,7 @@ function totalSelected(){
 
 function activeAiResult(){return state.aiResults.find(result=>result.id===state.activeAiResultId)||null}
 function currentSelectionContext(){
+  if(state.searchMode==='other')return {key:'other-materials',label:'其他物料',type:'other',parentObjectId:null,query:state.otherSearchQuery||''};
   const ai=activeAiResult();
   if(ai)return {key:ai.id,label:ai.display,type:'ai',parentObjectId:ai.parentObjectId||null,aiResultId:ai.id,box:{...ai.box}};
   if(state.manualSelection)return {key:state.manualSelection.id,label:state.manualSelection.label,type:'manual',parentObjectId:state.manualSelection.parentObjectId||null,box:{x:state.manualSelection.x,y:state.manualSelection.y,width:state.manualSelection.width,height:state.manualSelection.height},anchor:state.manualSelection.anchor};
@@ -866,12 +885,15 @@ function selectObject(id,type='object'){
 }
 
 function updateModeTabs(){
-  const visible = state.hasImage && Boolean(state.selectedObjectId) && !state.manualSelection && !state.activeAiResultId;
+  const visible = state.hasImage;
+  const other = state.searchMode==='other';
   $('#modeRow').hidden = !visible;
-  $('#similarMode').classList.toggle('active',state.searchMode==='similar');
-  $('#materialMode').classList.toggle('active',state.searchMode==='material');
-  $('#similarMode').setAttribute('aria-selected',String(state.searchMode==='similar'));
-  $('#materialMode').setAttribute('aria-selected',String(state.searchMode==='material'));
+  $('#similarMode').classList.toggle('active',!other);
+  $('#otherMode').classList.toggle('active',other);
+  $('#similarMode').setAttribute('aria-selected',String(!other));
+  $('#otherMode').setAttribute('aria-selected',String(other));
+  $('#otherMaterialSearch').hidden=!other;
+  $('#otherMaterialInput').value=state.otherSearchDraft;
 }
 
 function applyBox(element,box){
@@ -887,6 +909,7 @@ function updateHighlight(){
   aiExtractionHighlight?.classList.remove('show','loading');
   if(canvasAiMenu)canvasAiMenu.hidden=true;
   if(!state.hasImage) return;
+  if(state.searchMode==='other') return;
   const ai=activeAiResult();
   if(ai){applyBox(aiExtractionHighlight,ai.box);aiExtractionHighlight.classList.add('show');aiExtractionHighlight.classList.toggle('loading',ai.status==='loading');return;}
   if(state.manualSelection){
@@ -901,10 +924,45 @@ function updateHighlight(){
   if(object){applyBox(recognitionHighlight,object.box);recognitionHighlight.classList.add('show');}
 }
 
+function landingCatalogProducts(){return [...products.whole,...products.material.slice(0,4)].map(productFromRow)}
+
+function completeCatalogProducts(){
+  const seen=new Set();
+  return Object.values(products).flat().map(productFromRow).filter(item=>{
+    if(seen.has(item.id))return false;
+    seen.add(item.id);return true;
+  });
+}
+
+function otherSearchTerms(rawQuery){
+  const query=rawQuery.trim().toLowerCase().replaceAll('椅子','椅').replaceAll('桌子','桌');
+  if(!query)return [];
+  const vocabulary=['黑色','白色','灰色','红色','米色','棕色','木色','沙发','椅','桌','茶几','柜','地毯','窗帘','石材','木材','面料','皮革'];
+  const terms=vocabulary.filter(term=>query.includes(term));
+  return terms.length?terms:[query];
+}
+
+function otherMaterialBaseProducts(){
+  const terms=otherSearchTerms(state.otherSearchQuery);
+  if(!terms.length)return landingCatalogProducts();
+  return completeCatalogProducts().filter(item=>{
+    const haystack=`${item.name} ${item.brand} ${item.category} ${item.color}`.toLowerCase();
+    return terms.every(term=>haystack.includes(term));
+  }).slice(0,30);
+}
+
+function switchResultSearchMode(mode){
+  if(!state.hasImage||state.searchMode===mode)return;
+  state.modeFilterState[state.searchMode]=filterStateSnapshot();
+  state.searchMode=mode;
+  clearBatchSelection(false);restoreModeFilters(mode);closeFilter();updateModeTabs();updateHighlight();renderResults(360);saveCurrentSource();
+  showToast(mode==='other'?'已切换为找其他物料':'已返回找相似物料');
+}
+
 function currentBaseProducts(){
+  if(state.searchMode==='other')return otherMaterialBaseProducts();
   const ai=activeAiResult();
   if(ai)return (ai.type==='material'?products.material:products[resultKeyForObject(ai.parentObjectId)]||products.sofa).map(productFromRow);
-  if(state.searchMode === 'material' && state.selectedObjectId) return products.material.map(productFromRow);
   if(state.manualSelection) return products.whole.slice().reverse().map(productFromRow);
   const key = resultKeyForObject(state.selectedObjectId);
   return (products[key] || products.whole).map(productFromRow);
@@ -1037,15 +1095,17 @@ function renderResults(delay=0){
     updateBatchFavoriteUI();
     productGrid.innerHTML = '';
     if(!list.length){
-      productGrid.innerHTML = '<div class="empty-products"><div><strong>没有符合当前条件的物料</strong><span>可以重置筛选后继续查看</span></div></div>';
+      const query=state.searchMode==='other'?state.otherSearchQuery:'';
+      productGrid.innerHTML = `<div class="empty-products"><div><strong>${query?`未找到“${query}”相关物料`:'没有符合当前条件的物料'}</strong><span>${query?'可以更换关键词或调整筛选条件':'可以重置筛选后继续查看'}</span></div></div>`;
     }else list.forEach(item=>productGrid.appendChild(productCard(item)));
     let context = '原图搜索结果';
     const ai=activeAiResult();
-    if(ai)context=`${ai.display} · 搜索结果`;
+    if(state.searchMode==='other')context=state.otherSearchQuery?`“${state.otherSearchQuery}” · 找其他物料`:'找其他物料 · 首页推荐';
+    else if(ai)context=`${ai.display} · 找相似物料`;
     else if(state.manualSelection) context = `${state.manualSelection.label} · 局部框选搜索结果`;
     else if(state.selectedObjectId){
       const object = objectById(state.selectedObjectId);
-      context = `${object?.nameZh || '当前对象'} · ${state.searchMode==='material'?'面料/材质':'相似物料'}`;
+      context = `${object?.nameZh || '当前对象'} · 找相似物料`;
     }
     $('#resultsStatus').textContent = `${context}，共 ${list.length} 项`;
   },delay);
@@ -1287,7 +1347,7 @@ function applyFilter(key,value){
 
 function renderCategoryPopover(){
   const toolbar = popoverToolbar('分类');
-  const currentTop = state.searchMode==='material' ? '面料' : (Object.keys(categoryTree).find(top=>categoryTree[top].some(([,items])=>items.includes(state.filters.category))) || '石材');
+  const currentTop = Object.keys(categoryTree).find(top=>categoryTree[top].some(([,items])=>items.includes(state.filters.category))) || '石材';
   const recent = document.createElement('div');
   recent.className = 'recent-section';
   recent.innerHTML = '<strong>最近使用</strong><div class="recent-list"><button type="button">面料 / 一般布料</button><button type="button">木材 / 木饰面</button><button type="button">石材 / 天然石材</button></div>';
@@ -1479,7 +1539,7 @@ $('#aiResultsList')?.addEventListener('click',event=>{
   const card=event.target.closest('.ai-result-card');if(!card)return;
   if(event.target.closest('.ai-result-save')){saveAiResult(card.dataset.aiResultId);return;}
   if(event.target.closest('.ai-result-delete')){deleteAiResult(card.dataset.aiResultId);return;}
-  state.activeAiResultId=card.dataset.aiResultId;state.manualSelection=null;clearBatchSelection(false);resetFilters();saveCurrentSource();renderAiResults();renderObjectTabs();updateModeTabs();updateHighlight();renderResults(320);
+  state.activeAiResultId=card.dataset.aiResultId;state.manualSelection=null;state.searchMode='similar';clearBatchSelection(false);resetFilters();saveCurrentSource();renderAiResults();renderObjectTabs();updateModeTabs();updateHighlight();renderResults(320);
 });
 $('#aiResultsList')?.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.matches('.ai-result-card')){event.preventDefault();event.target.click();}});
 $('#imageSourceStrip')?.addEventListener('click',event=>{
@@ -1493,8 +1553,18 @@ $('#objectScroller').addEventListener('keydown',event=>{
 });
 $('#purposeSimilar').addEventListener('click',()=>switchSearchPurpose('similar'));
 $('#purposeMaterials').addEventListener('click',()=>switchSearchPurpose('materials'));
-$('#similarMode').addEventListener('click',()=>{state.searchMode='similar';clearBatchSelection(false);resetFilters();updateModeTabs();renderResults(360)});
-$('#materialMode').addEventListener('click',()=>{state.searchMode='material';clearBatchSelection(false);resetFilters();updateModeTabs();renderResults(360)});
+$('#similarMode').addEventListener('click',()=>switchResultSearchMode('similar'));
+$('#otherMode').addEventListener('click',()=>switchResultSearchMode('other'));
+$('#otherMaterialInput').addEventListener('input',event=>{state.otherSearchDraft=event.target.value});
+$('#otherMaterialSearch').addEventListener('submit',event=>{
+  event.preventDefault();
+  state.otherSearchDraft=$('#otherMaterialInput').value;
+  state.otherSearchQuery=state.otherSearchDraft.trim();
+  const submit=$('#otherMaterialSubmit');
+  clearTimeout(state.otherSearchTimer);submit.disabled=true;submit.textContent='搜索中';$('#otherMaterialSearch').setAttribute('aria-busy','true');
+  clearBatchSelection(false);renderResults(420);saveCurrentSource();
+  state.otherSearchTimer=setTimeout(()=>{submit.disabled=false;submit.textContent='搜索';$('#otherMaterialSearch').removeAttribute('aria-busy')},440);
+});
 
 [['categoryFilter','category'],['brandFilter','brand'],['colorFilter','color'],['priceFilter','price']].forEach(([id,type])=>$("#"+id).addEventListener('click',event=>{event.stopPropagation();openFilter(type,event.currentTarget)}));
 document.addEventListener('click',event=>{if(state.openFilter&&!event.target.closest('#filterPopover')&&!event.target.closest('.filter-button'))closeFilter()});

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="兆材云库单品图找物料与空间图找物料交互 Demo" />
   <title>图片找物料 - 兆材云库 Demo</title>
-  <link rel="stylesheet" href="styles.css?v=20260822-5" />
+  <link rel="stylesheet" href="styles.css?v=20260822-6" />
 </head>
 <body>
   <header class="site-header">
@@ -191,9 +191,14 @@
 
             <div class="mode-row" id="modeRow" hidden>
               <div class="mode-tabs" role="tablist" aria-label="搜索模式">
-                <button class="active" id="similarMode" type="button" role="tab" aria-selected="true">相似物料</button>
-                <button id="materialMode" type="button" role="tab" aria-selected="false">找面料/材质</button>
+                <button class="active" id="similarMode" type="button" role="tab" aria-selected="true">找相似物料</button>
+                <button id="otherMode" type="button" role="tab" aria-selected="false">找其他物料</button>
               </div>
+              <form class="other-material-search" id="otherMaterialSearch" role="search" hidden>
+                <label class="sr-only" for="otherMaterialInput">搜索其他物料</label>
+                <input id="otherMaterialInput" type="search" placeholder="请输入内容" autocomplete="off" />
+                <button id="otherMaterialSubmit" type="submit">搜索</button>
+              </form>
             </div>
 
             <div class="filter-row" id="filterRow">
@@ -265,7 +270,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="exceljs.min.js?v=4.4.0"></script>
-  <script src="app.js?v=20260822-7"></script>
+  <script src="app.js?v=20260822-8"></script>
   <script src="export-materials.js?v=20260821-1"></script>
   <script src="./result-pipeline.js?v=20260821-1"></script>
 </body>
