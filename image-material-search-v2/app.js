@@ -695,7 +695,7 @@ function startAiExtraction(type,{box,parentObjectId=null,manualId=null}={}){
 
 function renderAiResults(){
   const panel=$('#aiResultsPanel'),list=$('#aiResultsList');if(!panel||!list)return;
-  const visible=state.uploadIntent==='materials'&&state.hasImage;
+  const visible=state.hasImage;
   panel.hidden=!visible;panel.classList.toggle('is-empty',!state.aiResults.length);list.innerHTML='';$('#aiResultsCount').textContent=`${state.aiResults.length} 个结果`;
   if(!visible)return;
   state.aiResults.forEach(result=>{
