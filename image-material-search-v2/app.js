@@ -361,13 +361,15 @@ function setImage(url,name,inputValue=name){
 const emptyStateContent={
   similar:{
     uploadTitle:'上传单品图片',uploadHint:'点击选择，或将单品图片拖拽到这里',linkLabel:'单品图片链接',linkPlaceholder:'粘贴单品图片链接',linkAction:'查找相似物料',
-    kicker:'单品图找物料',title:'用一张单品图，查找同款与相似物料',description:'适合家具、灯具、饰品等主体清晰的产品图片。',
-    steps:[['上传单品图片','主体清晰、背景简洁，匹配会更准确'],['查看相似结果','系统会根据外观与品类推荐相关物料'],['继续筛选','可按分类、品牌、色系和价格缩小范围']]
+    kicker:'单品图找物料',title:'一张图片，找到同款与相似物料',description:'适用于家具、灯具、饰品、材料等单品图片。',
+    steps:[['上传单品图片','上传或拖入您想查找的产品或材料图片'],['AI 搜索匹配','根据外观、材质、颜色等特征智能匹配'],['找到同款与相似物料','查看平台匹配结果，并进一步筛选物料']],
+    bottomHint:'上传后，搜索结果将在这里展示'
   },
   materials:{
-    uploadTitle:'上传空间图片',uploadHint:'点击选择，或将空间图片拖拽到这里',linkLabel:'空间图片链接',linkPlaceholder:'粘贴空间图片链接',linkAction:'识别并找物料',
-    kicker:'空间图找物料',title:'从空间图片中识别并整理物料',description:'适合客厅、卧室、商业空间等包含多个物体的图片。',
-    steps:[['上传空间图片','系统会分析图片中的家具与材料'],['选择识别物体','逐个查看对应的相似物料'],['加入物料清单','集中整理并导出需要的物料']]
+    uploadTitle:'上传效果图',uploadHint:'点击选择，或将室内设计效果图拖拽到这里',linkLabel:'效果图链接',linkPlaceholder:'粘贴效果图链接',linkAction:'识别并找物料',
+    kicker:'空间图找物料',title:'一张效果图，快速生成物料清单',description:'适用于客厅、卧室、酒店、商业空间等室内效果图。',
+    steps:[['上传效果图','上传或拖入您的室内设计效果图'],['AI 识别物料','自动识别图中的家具、灯具、饰品及材料'],['选择并生成清单','查找相似物料，选择需要的物料并生成清单']],
+    bottomHint:'上传后，AI 识别结果及匹配物料将在这里展示'
   }
 };
 
@@ -381,6 +383,7 @@ function updateEmptyStateContent(){
   $('#uploadGuideKicker').textContent=content.kicker;
   $('#uploadGuideTitle').textContent=content.title;
   $('#uploadGuideDescription').textContent=content.description;
+  $('.guide-result-note').textContent=content.bottomHint;
   const steps=$('#uploadGuideSteps');steps.innerHTML='';
   content.steps.forEach(([title,detail],index)=>{
     const item=document.createElement('li');

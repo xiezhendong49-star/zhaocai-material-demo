@@ -51,15 +51,15 @@
     <section class="landing-view" id="landingView" aria-labelledby="landingTitle">
       <div class="materials-shell">
         <aside class="material-sidebar" aria-label="物料分类筛选">
-          <button class="materials-list-entry" id="materialsListEntry" type="button" aria-label="进入空间图找物料">
+          <button class="materials-list-entry" id="materialsListEntry" type="button" aria-label="进入效果图转清单">
             <span class="materials-list-entry-image" aria-hidden="true">
               <i class="entry-detect-box entry-detect-box-a"></i>
               <i class="entry-detect-box entry-detect-box-b"></i>
               <i class="entry-list-sheet"></i>
             </span>
             <span class="materials-list-entry-copy">
-              <strong>空间图找物料</strong>
-              <small>识别空间中的物体，查找对应物料</small>
+              <strong>效果图转清单</strong>
+              <small>AI识别空间物料，自动生成物料清单</small>
               <b>开始找物料 <span aria-hidden="true">→</span></b>
             </span>
           </button>
@@ -87,9 +87,9 @@
             <button class="keyword-submit" type="submit" aria-label="搜索">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
             </button>
-            <button class="image-search-trigger" id="bannerUpload" type="button" aria-label="进入单品图找物料">
+            <button class="image-search-trigger" id="bannerUpload" type="button" aria-label="进入找同款">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="m5.5 17 4.3-4.2 3.1 3 2.2-2 3.4 3.2"/></svg>
-              <span>单品图找物料</span>
+              <span>找同款</span>
             </button>
           </form>
 
@@ -157,16 +157,16 @@
           <section class="results-column" aria-label="搜索结果">
             <section class="upload-guide" id="uploadGuide" aria-labelledby="uploadGuideTitle" hidden>
               <span class="guide-kicker" id="uploadGuideKicker">单品图找物料</span>
-              <h2 id="uploadGuideTitle">用一张单品图，查找同款与相似物料</h2>
-              <p id="uploadGuideDescription">适合家具、灯具、饰品等主体清晰的产品图片。</p>
+              <h2 id="uploadGuideTitle">一张图片，找到同款与相似物料</h2>
+              <p id="uploadGuideDescription">适用于家具、灯具、饰品、材料等单品图片。</p>
               <ol class="guide-steps" id="uploadGuideSteps"></ol>
               <p class="guide-result-note">上传后，搜索结果将在这里展示</p>
             </section>
             <div class="result-purpose-switch" id="resultPurposeSwitch" role="group" aria-label="图片搜索用途">
               <span>当前用途</span>
               <div>
-                <button id="purposeMaterials" type="button">空间图找物料</button>
-                <button id="purposeSimilar" type="button">单品图找物料</button>
+                <button id="purposeMaterials" type="button">效果图转清单</button>
+                <button id="purposeSimilar" type="button">找同款</button>
               </div>
             </div>
             <div class="object-meta-row">
@@ -280,7 +280,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="exceljs.min.js?v=4.4.0"></script>
-  <script src="app.js?v=20260826-5"></script>
+  <script src="app.js?v=20260826-6"></script>
   <script src="export-materials.js?v=20260826-1"></script>
   <script src="notifications.js?v=20260826-4"></script>
   <script src="./result-pipeline.js?v=20260821-1"></script>
