@@ -74,6 +74,7 @@
 
   function visibleNotifications() {
     const state = currentDemoState();
+    if (state === 'empty') return [];
     if (state === 'mixed') return mixedSamples().map(item => demoReadIds.has(item.id) ? { ...item, unread:false } : item);
     if (state === 'success') return [sampleNotification({ id:'demo-download-ready', taskId:'demo-task-ready', status:'ready', fileName:'物料清单_演示.xlsx', unread:!demoReadIds.has('demo-download-ready') })];
     if (state === 'failed') return [sampleNotification({ id:'demo-download-failed', taskId:'demo-task-failed', status:'failed', fileName:'物料清单_失败演示.xlsx', unread:!demoReadIds.has('demo-download-failed') })];
@@ -303,6 +304,6 @@
 
   window.zhaocaiNotifications = { markRead:markNotificationRead, markReadByTask:markNotificationReadByTask, render };
   const requestedDemo = new URLSearchParams(location.search).get('notice');
-  if (demoState && ['mixed','success','failed','read'].includes(requestedDemo)) demoState.value = requestedDemo;
+  if (demoState && ['empty','mixed','success','failed','read'].includes(requestedDemo)) demoState.value = requestedDemo;
   render();
 })();
