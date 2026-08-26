@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="兆材云库单品图找物料与空间图找物料交互 Demo" />
   <title>图片找物料 - 兆材云库 Demo</title>
-  <link rel="stylesheet" href="styles.css?v=20260824-1" />
+  <link rel="stylesheet" href="styles.css?v=20260826-3" />
+  <link rel="stylesheet" href="export-feedback.css?v=20260825-4" />
+  <link rel="stylesheet" href="notifications.css?v=20260826-1" />
 </head>
 <body>
   <header class="site-header">
@@ -25,10 +27,22 @@
         <button class="member-button"><span aria-hidden="true">◆</span> 开通会员 选品无忧</button>
         <button class="text-action">中国站⌄</button>
         <button class="text-action">CNY⌄</button>
-        <button class="icon-button" aria-label="消息">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/><circle cx="9" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="15" cy="11" r="1"/></svg>
-        </button>
-        <span class="avatar" aria-label="个人中心">Z</span>
+        <div class="notification-anchor">
+          <button class="icon-button notification-trigger" id="notificationTrigger" type="button" aria-label="消息通知" aria-haspopup="dialog" aria-expanded="false" aria-controls="notificationPanel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/><circle cx="9" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="15" cy="11" r="1"/></svg>
+            <span class="notification-badge" id="notificationBadge" hidden></span>
+          </button>
+          <section class="notification-panel" id="notificationPanel" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" tabindex="-1" hidden>
+            <header>
+              <strong id="notificationTitle">通知</strong>
+            </header>
+            <div class="notification-list" id="notificationList" aria-live="polite"></div>
+            <footer class="notification-demo-controls">
+              <label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label>
+            </footer>
+          </section>
+        </div>
+        <a class="avatar" href="download-center.html" aria-label="进入个人中心下载中心">Z</a>
       </div>
     </div>
   </header>
@@ -81,7 +95,7 @@
 
           <div class="catalog-toolbar">
             <p>共为您找到 <strong>17,892</strong> 款相关物料</p>
-            <div aria-label="物料列表操作"><button type="button">价格：从低到高 <span>⌄</span></button><button type="button" class="refresh-button" aria-label="刷新物料">↻</button></div>
+            <div aria-label="物料列表操作"><button type="button">价格 <span>⌄</span></button><button type="button" class="refresh-button" aria-label="刷新物料">↻</button></div>
           </div>
           <div class="landing-grid" id="landingGrid" aria-label="物料列表"></div>
         </div>
@@ -97,10 +111,9 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
               </button>
               <div class="file-chip" id="fileChip">
-                <img id="fileThumb" src="assets/room-v2.png" alt="" width="42" height="34" />
-                <label class="sr-only" for="imageSourceInput">图片或图片链接</label>
-                <input id="imageSourceInput" type="text" placeholder="请粘贴图片或者图片的链接" autocomplete="off" spellcheck="false" />
-                <button class="clear-file" id="clearFile" type="button" aria-label="清除当前图片">×</button>
+                <label class="sr-only" for="imageSourceInput">待添加图片或图片链接</label>
+                <input id="imageSourceInput" type="text" placeholder="请输入图片链接" autocomplete="off" spellcheck="false" />
+                <button class="clear-file" id="clearFile" type="button" aria-label="清除待添加图片" hidden>×</button>
               </div>
               <button class="search-button" id="searchButton" type="button">搜索</button>
             </div>
@@ -179,9 +192,6 @@
                 </div>
               </div>
               <div class="object-actions">
-                <button class="batch-favorite" id="batchFavorite" type="button" disabled>
-                  批量收藏 <strong id="batchFavoriteCount" aria-label="已选择 0 项">0</strong>
-                </button>
                 <button class="selected-entry" id="selectedEntry" type="button" aria-haspopup="dialog" aria-controls="selectedDrawer">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v15H5z"/><path d="M8 3h8v4H8zM8 11h8M8 15h5"/></svg>
             物料清单 <strong id="selectedTotal">0</strong>
@@ -229,34 +239,34 @@
     </header>
     <div class="drawer-content" id="drawerContent"></div>
     <footer class="drawer-footer">
-      <span class="export-button-wrap is-empty" id="exportButtonWrap" title="请先选择至少一项物料">
-        <button class="export-button" id="exportButton" type="button" aria-describedby="exportHint" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
-          <span>导出物料清单</span>
+      <label class="export-demo-control" for="exportStateDemo">
+        <span>清单状态演示</span>
+        <select id="exportStateDemo">
+          <option value="auto">跟随实际状态</option>
+          <option value="empty">无物料可导出</option>
+          <option value="initial">待生成</option>
+          <option value="generating">生成中</option>
+          <option value="success">生成成功</option>
+          <option value="changed">清单已修改</option>
+          <option value="failed">生成失败</option>
+        </select>
+      </label>
+      <div class="export-action-shell" id="exportActionShell">
+        <span class="export-button-wrap is-empty" id="exportButtonWrap" title="请先选择至少一项物料">
+          <button class="export-button" id="exportButton" type="button" aria-describedby="exportHint" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+            <i class="export-loading-spinner" aria-hidden="true"></i>
+            <span>导出物料清单</span>
+          </button>
+        </span>
+        <button class="export-cancel-segment" id="cancelExport" type="button" aria-label="取消生成物料清单" hidden>
+          <span>取消生成</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
         </button>
-      </span>
+      </div>
       <p id="exportHint">请先选择至少一项物料</p>
     </footer>
   </aside>
-
-  <div class="library-modal-backdrop" id="libraryModalBackdrop" hidden></div>
-  <section class="library-modal" id="libraryModal" role="dialog" aria-modal="true" aria-labelledby="libraryModalTitle" aria-describedby="libraryModalDescription" aria-hidden="true" inert hidden>
-    <header>
-      <div><h2 id="libraryModalTitle">加入物料库</h2><p id="libraryModalDescription">为当前物料选择保存分组</p></div>
-      <button id="libraryModalClose" type="button" aria-label="关闭加入物料库弹窗">×</button>
-    </header>
-    <p class="library-product" id="libraryProductName"></p>
-    <label class="library-group-field" for="libraryGroup">
-      <span><i aria-hidden="true">*</i> 选择分组</span>
-      <select id="libraryGroup">
-        <option value="">请选择分组</option>
-        <option value="project-lighting">工程灯具测试分组</option>
-        <option value="default">默认分组</option>
-        <option value="soft-decoration">项目软装物料</option>
-        <option value="temporary">临时选材</option>
-      </select>
-    </label>
-  </section>
 
   <div class="exit-modal-backdrop" id="exitModalBackdrop" hidden></div>
   <section class="exit-modal" id="exitModal" role="dialog" aria-modal="true" aria-labelledby="exitModalTitle" aria-describedby="exitModalDescription" aria-hidden="true" inert hidden>
@@ -270,8 +280,9 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="exceljs.min.js?v=4.4.0"></script>
-  <script src="app.js?v=20260822-8"></script>
-  <script src="export-materials.js?v=20260821-1"></script>
+  <script src="app.js?v=20260826-5"></script>
+  <script src="export-materials.js?v=20260826-1"></script>
+  <script src="notifications.js?v=20260826-4"></script>
   <script src="./result-pipeline.js?v=20260821-1"></script>
 </body>
 </html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="兆材云库物料清单下载中心演示" />
+  <title>下载中心 - 兆材云库 Demo</title>
+  <link rel="stylesheet" href="download-center.css?v=20260825-2" />
+  <link rel="stylesheet" href="download-center-overrides.css?v=20260826-2" />
+  <link rel="stylesheet" href="notifications.css?v=20260826-1" />
+</head>
+<body>
+  <header class="account-header">
+    <a class="account-brand" href="index.html" aria-label="返回找物料">
+      <span class="brand-mark" aria-hidden="true"><i></i></span>
+      <strong>兆材云库</strong>
+    </a>
+    <nav class="account-main-nav" aria-label="主导航">
+      <a href="index.html">首页</a><a class="active" href="index.html">找物料</a><a href="#">看案例</a><a href="#">新材速递</a><a href="#">做项目</a>
+    </nav>
+    <div class="account-header-actions">
+      <a class="member-link" href="#">开会员送灵感币</a>
+      <button type="button">中国站⌄</button><button type="button">CNY⌄</button><button type="button">简体⌄</button>
+      <div class="notification-anchor">
+        <button class="header-icon notification-trigger" id="notificationTrigger" type="button" aria-label="通知" aria-haspopup="dialog" aria-expanded="false" aria-controls="notificationPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/><circle cx="9" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="15" cy="11" r="1"/></svg>
+          <span class="notification-badge" id="notificationBadge" hidden></span>
+        </button>
+        <section class="notification-panel" id="notificationPanel" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" tabindex="-1" hidden>
+          <header><strong id="notificationTitle">通知</strong></header>
+          <div class="notification-list" id="notificationList" aria-live="polite"></div>
+          <footer class="notification-demo-controls"><label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label></footer>
+        </section>
+      </div>
+      <span class="account-avatar" aria-label="当前用户">Z</span>
+    </div>
+  </header>
+
+  <div class="account-layout">
+    <aside class="account-sidebar" aria-label="个人中心导航">
+      <a href="#">个人首页</a>
+      <a href="#">个人资料</a>
+      <a href="#">我的收藏</a>
+      <a href="#">加入机构</a>
+      <a href="#">归口业务</a>
+      <a href="#">我的需求</a>
+      <a href="message-center.html">消息中心</a>
+      <a class="active" href="download-center.html" aria-current="page">下载中心 <i id="downloadNavDot" hidden aria-label="有新文件"></i></a>
+      <a href="#">收货地址</a>
+      <a href="#">设置</a>
+    </aside>
+
+    <main class="download-main">
+      <header class="download-heading">
+        <div><h1>下载中心</h1><p>导出的文件会保存在这里，完成后可随时下载</p></div>
+        <div class="download-heading-actions">
+          <label class="download-demo-control" for="downloadDemoState"><span>下载状态演示</span><select id="downloadDemoState"><option value="actual">跟随实际状态</option><option value="generating">生成中</option><option value="ready">可下载</option><option value="failed">生成失败</option><option value="empty">空状态</option></select></label>
+          <a class="demo-return-link" href="index.html?demo=drawer"><span>返回来源页面</span><small>仅供演示</small></a>
+        </div>
+      </header>
+
+      <nav class="download-tabs" id="downloadTabs" aria-label="下载任务筛选">
+        <button class="active" type="button" data-status="all" aria-pressed="true">全部 <span>0</span></button>
+        <button type="button" data-status="generating" aria-pressed="false">生成中 <span>0</span></button>
+        <button type="button" data-status="ready" aria-pressed="false">可下载 <span>0</span></button>
+        <button type="button" data-status="failed" aria-pressed="false">失败 <span>0</span></button>
+      </nav>
+
+      <section class="download-list-shell" aria-live="polite">
+        <div class="download-list-head" aria-hidden="true"><span>文件</span><span>创建时间</span><span>状态</span><span>操作</span></div>
+        <div class="download-list" id="downloadList"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="confirm-backdrop" id="deleteConfirmBackdrop" hidden></div>
+  <section class="confirm-dialog" id="deleteConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" aria-describedby="deleteConfirmDescription" hidden inert>
+    <h2 id="deleteConfirmTitle">删除下载记录？</h2>
+    <p id="deleteConfirmDescription">删除后，该物料清单将无法再次下载。</p>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" id="deleteConfirmCancel" type="button">取消</button>
+      <button class="confirm-delete" id="deleteConfirmSubmit" type="button">确认删除</button>
+    </div>
+  </section>
+
+  <div class="download-toast" id="downloadToast" role="status" aria-live="polite"></div>
+  <script src="exceljs.min.js?v=4.4.0"></script>
+  <script src="notifications.js?v=20260826-4"></script>
+  <script src="download-center.js?v=20260826-3"></script>
+</body>
+</html>

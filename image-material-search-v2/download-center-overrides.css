@@ -1,0 +1,130 @@
+.demo-return-link {
+  gap: 9px;
+}
+
+.download-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.download-demo-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #777772;
+  font-size: 11px;
+}
+
+.download-demo-control select {
+  width: 126px;
+  height: 38px;
+  padding: 0 30px 0 10px;
+  border: 1px solid #dcdcd8;
+  border-radius: 6px;
+  background: #fff;
+  color: #3e3e3a;
+  font: inherit;
+}
+
+.download-demo-control select:focus-visible {
+  outline: 2px solid #1f6feb;
+  outline-offset: 2px;
+}
+
+.download-empty button {
+  display: inline-flex;
+  height: 36px;
+  margin-top: 16px;
+  padding: 0 14px;
+  border: 1px solid #dcdcd8;
+  border-radius: 6px;
+  align-items: center;
+  color: #555550;
+}
+
+.download-empty button:hover {
+  background: #f6f6f3;
+}
+
+@media (max-width: 760px) {
+  .download-heading-actions { align-items: flex-end; flex-direction: column; }
+  .download-demo-control span { display: none; }
+}
+
+.demo-return-link small {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #f3f3f0;
+  color: #8b8b85;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(31, 31, 29, 0.34);
+}
+
+.confirm-dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 31;
+  width: min(400px, calc(100% - 32px));
+  padding: 24px;
+  border: 1px solid #e5e5e1;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 16px 42px rgba(35, 35, 32, 0.16);
+  transform: translate(-50%, -50%);
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.confirm-dialog p {
+  margin: 10px 0 22px;
+  color: #73736e;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-actions button {
+  min-width: 88px;
+  height: 38px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.confirm-cancel {
+  border: 1px solid #dcdcd7;
+  background: #fff;
+}
+
+.confirm-delete {
+  background: #c43b32;
+  color: #fff;
+  font-weight: 600;
+}
+
+.confirm-actions button:hover {
+  filter: brightness(0.97);
+}
+
+.confirm-actions button:focus-visible {
+  outline: 2px solid #1f6feb;
+  outline-offset: 2px;
+}

@@ -135,9 +135,9 @@ const state = {
   view:'landing', hasImage:true, imageUrl:sampleImage, imageName:'客厅效果图.jpg', recognitionStatus:'loading',
   objects:[], selectedObjectId:null, manualSelection:null, searchMode:'similar', resultsMode:'whole',
   filters:{category:'',brand:'',color:'',price:{label:'',min:null,max:null}}, sort:'default',
-  selectedGroups:new Map(), favorites:new Set(), batchSelected:new Set(), openFilter:null, recognitionTimer:null, resultTimer:null, objectUrl:null, uploadIntent:'similar', pendingUploadIntent:'similar', libraryTarget:null, libraryTrigger:null,
+  selectedGroups:new Map(), batchSelected:new Set(), openFilter:null, recognitionTimer:null, resultTimer:null, objectUrl:null, uploadIntent:'similar', pendingUploadIntent:'similar',
   objectGuideShown:false, objectGuideVisible:false, objectGuideTimer:null, demoState:'recognized',
-  imageSources:[], currentSourceId:null, sourceCounter:0, pendingAddSource:false,
+  imageSources:[], currentSourceId:null, sourceCounter:0, pendingAddSource:false, pendingImageFile:null, imageInputValue:'',
   groupMeta:new Map(), aiResults:[], activeAiResultId:null, aiResultCounter:0, manualCounter:0,
   imageZoom:1, zoomOrigin:{x:50,y:50}, purposeBackup:null,
   otherSearchDraft:'', otherSearchQuery:'', otherSearchTimer:null,
@@ -159,8 +159,6 @@ const productGrid = $('#productGrid');
 const filterPopover = $('#filterPopover');
 const drawer = $('#selectedDrawer');
 const drawerBackdrop = $('#drawerBackdrop');
-const libraryModal = $('#libraryModal');
-const libraryModalBackdrop = $('#libraryModalBackdrop');
 const exitModal = $('#exitModal');
 const exitModalBackdrop = $('#exitModalBackdrop');
 
@@ -181,7 +179,7 @@ function currentSource(){return state.imageSources.find(source=>source.id===stat
 
 function sourceSnapshot(){
   return {
-    id:state.currentSourceId,name:state.imageName,url:state.imageUrl,inputValue:$('#imageSourceInput').value,
+    id:state.currentSourceId,name:state.imageName,url:state.imageUrl,inputValue:state.imageInputValue || state.imageName,
     recognitionStatus:state.recognitionStatus,objects:state.objects,selectedObjectId:state.selectedObjectId,
     manualSelection:state.manualSelection,searchMode:state.searchMode,resultsMode:state.resultsMode,
     selectedGroups:state.selectedGroups,groupMeta:state.groupMeta,aiResults:state.aiResults,
@@ -230,21 +228,23 @@ function loadImageSource(id){
   saveCurrentSource();
   const source=state.imageSources.find(item=>item.id===id);if(!source)return;
   state.currentSourceId=source.id;state.imageName=source.name;state.imageUrl=source.url;
+  state.imageInputValue=source.inputValue||source.name;
   state.recognitionStatus=source.recognitionStatus;state.objects=source.objects;state.selectedObjectId=source.selectedObjectId;
   state.manualSelection=source.manualSelection;state.searchMode=source.searchMode;state.resultsMode=source.resultsMode;
   state.selectedGroups=source.selectedGroups;state.groupMeta=source.groupMeta;state.aiResults=source.aiResults;
   state.activeAiResultId=source.activeAiResultId;state.aiResultCounter=source.aiResultCounter;state.manualCounter=source.manualCounter;
   state.otherSearchDraft=source.otherSearchDraft||'';state.otherSearchQuery=source.otherSearchQuery||'';
   state.imageZoom=source.imageZoom||1;state.zoomOrigin=source.zoomOrigin||{x:50,y:50};
-  sourceImage.src=source.url;sourceImage.alt=`已上传图片：${source.name}`;$('#fileThumb').src=source.url;
-  $('#imageSourceInput').value=source.inputValue||source.name;
+  sourceImage.src=source.url;sourceImage.alt=`已上传图片：${source.name}`;
+  $('#imageSourceInput').value=state.imageInputValue;
+  updatePendingUploadUI();
   clearBatchSelection(false);resetFilters();renderImageSources();applyZoom();renderObjectTabs();updateModeTabs();updateHighlight();renderAiResults();renderResults(0);
 }
 
 function registerCurrentSource(){
   if(state.uploadIntent!=='materials'||!state.hasImage)return;
   if(!state.currentSourceId){
-    const source=createImageSource(state.imageUrl,state.imageName,$('#imageSourceInput').value);
+    const source=createImageSource(state.imageUrl,state.imageName,state.imageName);
     state.currentSourceId=source.id;state.imageSources.push(source);
   }
   saveCurrentSource();renderImageSources();
@@ -299,14 +299,14 @@ function resetFilters(){
 }
 
 function filterStateSnapshot(){
-  return {filters:{...state.filters,color:Array.isArray(state.filters.color)?[...state.filters.color]:state.filters.color,price:{...state.filters.price}},sort:state.sort};
+  return {filters:{...state.filters,color:Array.isArray(state.filters.color)?[...state.filters.color]:state.filters.color,price:{...state.filters.price}}};
 }
 
 function restoreModeFilters(mode){
   const saved=state.modeFilterState[mode];
   if(!saved){resetFilters();return;}
   state.filters={...saved.filters,color:Array.isArray(saved.filters.color)?[...saved.filters.color]:saved.filters.color,price:{...saved.filters.price}};
-  state.sort=saved.sort;updateFilterLabels();
+  state.sort='default';updateFilterLabels();
 }
 
 function resetSearchState({preserveCollection=false}={}){
@@ -343,7 +343,6 @@ function resetSearchState({preserveCollection=false}={}){
   resetFilters();
   updateSelectedUI();
   updateBatchFavoriteUI();
-  closeLibraryModal(false);
   hideObjectGuide();
 }
 
@@ -351,10 +350,10 @@ function setImage(url,name,inputValue=name){
   state.hasImage = true;
   state.imageUrl = url;
   state.imageName = name || '已上传图片.jpg';
+  state.imageInputValue = inputValue || state.imageName;
   sourceImage.src = url;
   sourceImage.alt = `已上传图片：${state.imageName}`;
-  $('#fileThumb').src = url;
-  $('#imageSourceInput').value = inputValue || state.imageName;
+  $('#imageSourceInput').value = state.imageInputValue;
   setImagePresence(true);
   renderImageSources();
 }
@@ -397,10 +396,7 @@ function setImagePresence(hasImage){
   state.hasImage = hasImage;
   sourceImage.hidden = !hasImage;
   $('#emptyUpload').hidden = hasImage;
-  $('#fileThumb').hidden = !hasImage;
-  $('#clearFile').hidden = !hasImage;
-  $('#searchButton').disabled = !hasImage && !$('#imageSourceInput').value.trim();
-  $('#fileChip').classList.toggle('empty',!hasImage);
+  updatePendingUploadUI();
   imageStage.classList.toggle('empty',!hasImage);
   imageStage.classList.remove('dragging');
   imageStage.tabIndex = hasImage ? 0 : -1;
@@ -417,6 +413,42 @@ function setImagePresence(hasImage){
   if(hasImage)requestAnimationFrame(updateImageCanvasMetrics);
 }
 
+function updatePendingUploadUI(){
+  const input=$('#imageSourceInput');
+  const hasPending=Boolean(state.pendingImageFile || input.value.trim());
+  $('#clearFile').hidden=!hasPending;
+  $('#searchButton').disabled=!hasPending;
+  $('#fileChip').classList.toggle('empty',!hasPending);
+  $('.image-column').classList.toggle('has-pending-upload',hasPending);
+}
+
+function clearPendingUpload({focus=false}={}){
+  state.pendingImageFile=null;
+  state.pendingAddSource=false;
+  $('#imageSourceInput').value='';
+  imageFile.value='';
+  updatePendingUploadUI();
+  if(focus)$('#imageSourceInput').focus({preventScroll:true});
+}
+
+function finishPendingUpload(displayValue){
+  state.pendingImageFile=null;
+  state.pendingAddSource=false;
+  state.imageInputValue=displayValue;
+  $('#imageSourceInput').value=displayValue;
+  imageFile.value='';
+  updatePendingUploadUI();
+}
+
+function stageUpload(file,intent=state.pendingUploadIntent || state.uploadIntent){
+  if(!file || !file.type.startsWith('image/')){showToast('请选择图片文件');return;}
+  state.pendingImageFile=file;
+  state.pendingUploadIntent=intent;
+  $('#imageSourceInput').value=file.name;
+  updatePendingUploadUI();
+  $('#searchButton').focus({preventScroll:true});
+}
+
 function clearCurrentImage(){
   state.imageSources.forEach(source=>{if(source.url?.startsWith('blob:'))URL.revokeObjectURL(source.url)});
   if(state.objectUrl&&!state.imageSources.some(source=>source.url===state.objectUrl))URL.revokeObjectURL(state.objectUrl);
@@ -424,10 +456,10 @@ function clearCurrentImage(){
   resetSearchState();
   state.imageUrl = '';
   state.imageName = '';
+  state.imageInputValue = '';
   sourceImage.removeAttribute('src');
   sourceImage.alt = '';
-  $('#fileThumb').removeAttribute('src');
-  $('#imageSourceInput').value = '';
+  clearPendingUpload();
   $('#uploadLinkInput').value = '';
   renderObjectTabs();
   $('#activeFilters').innerHTML = '';
@@ -440,7 +472,6 @@ function clearCurrentImage(){
 
 function showLanding(){
   closeDrawer();
-  closeLibraryModal(false);
   closeFilter();
   state.view = 'landing';
   searchView.hidden = true;
@@ -520,7 +551,7 @@ function switchSearchPurpose(intent){
     $('.results-column').classList.remove('similar-flow');renderImageSources();renderAiResults();renderObjectTabs();updateModeTabs();updateHighlight();renderResults(320);updateSelectedUI();updatePurposeSwitch();
     showToast('已返回空间图找物料，原有识别和清单已保留');return;
   }
-  const url=state.imageUrl,name=state.imageName,inputValue=$('#imageSourceInput').value;
+  const url=state.imageUrl,name=state.imageName,inputValue=state.imageInputValue||name;
   resetSearchState({preserveCollection:true});state.uploadIntent='materials';setImage(url,name,inputValue);
   const nextSource=createImageSource(url,name,inputValue);state.currentSourceId=nextSource.id;state.imageSources.push(nextSource);
   $('.results-column').classList.remove('similar-flow');showSearch({status:'loading'});updatePurposeSwitch();showToast('已切换为空间图找物料，正在识别图片');
@@ -533,14 +564,14 @@ function startUpload(file,intent=state.pendingUploadIntent || 'similar'){
   state.objectUrl = URL.createObjectURL(file);
   resetSearchState({preserveCollection:intent==='materials'});
   state.uploadIntent = intent;
-  setImage(state.objectUrl,file.name);
+  setImage(state.objectUrl,file.name,file.name);
   if(intent==='materials'){
     const source=createImageSource(state.objectUrl,file.name,file.name);
     state.currentSourceId=source.id;state.imageSources.push(source);
     showSearch({status:'loading'});
   }
   else showSearch({status:'success',objects:[]});
-  state.pendingAddSource=false;
+  finishPendingUpload(file.name);
 }
 
 function startUrlSearch(rawUrl,intent='similar',triggerButton=$('#searchButton')){
@@ -564,6 +595,7 @@ function startUrlSearch(rawUrl,intent='similar',triggerButton=$('#searchButton')
       const source=createImageSource(url.href,'图片链接',url.href);state.currentSourceId=source.id;state.imageSources.push(source);
       showSearch({status:'loading'});
     }else showSearch({status:'success',objects:[]});
+    finishPendingUpload(url.href);
   };
   probe.onerror=()=>{button.textContent=originalLabel;button.disabled=false;showToast('图片链接无法加载，请检查后重试')};
   probe.src=url.href;
@@ -753,6 +785,7 @@ async function saveAiResult(id){
 
 function deleteAiResult(id){
   const result=state.aiResults.find(item=>item.id===id);if(!result)return;
+  if(state.selectedGroups.get(id)?.size&&window.blockMaterialListMutation?.())return;
   state.aiResults=state.aiResults.filter(item=>item.id!==id);state.selectedGroups.delete(id);state.groupMeta.delete(id);
   if(state.activeAiResultId===id)state.activeAiResultId=null;
   saveCurrentSource();renderAiResults();updateSelectedUI();renderObjectTabs();updateModeTabs();updateHighlight();renderResults(0);showToast(`已删除 ${result.display}`);
@@ -830,6 +863,8 @@ function showObjectGuide(){
 function deleteRecognizedObject(id){
   const object=objectById(id);
   if(!object) return;
+  const changesMaterialList=Boolean(state.selectedGroups.get(id)?.size)||[...state.groupMeta.entries()].some(([key,meta])=>meta.parentObjectId===id&&state.selectedGroups.get(key)?.size);
+  if(changesMaterialList&&window.blockMaterialListMutation?.())return;
   const removedCount=state.selectedGroups.get(id)?.size || 0;
   state.objects=state.objects.filter(item=>item.id!==id);
   state.selectedGroups.delete(id);
@@ -976,22 +1011,13 @@ function filteredProducts(){
   if(color) list = list.filter(item=>item.color===color);
   if(price.min !== null) list = list.filter(item=>item.priceValue>=price.min);
   if(price.max !== null) list = list.filter(item=>item.priceValue<=price.max);
-  if(state.sort==='price-asc') list.sort((a,b)=>a.priceValue-b.priceValue);
-  if(state.sort==='price-desc') list.sort((a,b)=>b.priceValue-a.priceValue);
   return list;
 }
 
 function isSelectable(){return state.uploadIntent==='materials'&&state.hasImage}
 function isProductSelected(productId){return Boolean(state.selectedGroups.get(currentSelectionContext().key)?.has(productId))}
 
-function updateBatchFavoriteUI(){
-  const count=state.batchSelected.size;
-  const button=$('#batchFavorite');
-  button.disabled=count===0;
-  button.classList.toggle('active',count>0);
-  $('#batchFavoriteCount').textContent=count;
-  $('#batchFavoriteCount').setAttribute('aria-label',`已选择 ${count} 项`);
-}
+function updateBatchFavoriteUI(){}
 
 function clearBatchSelection(shouldRender=true){
   state.batchSelected.clear();
@@ -999,37 +1025,10 @@ function clearBatchSelection(shouldRender=true){
   if(shouldRender)renderResults(0);
 }
 
-function toggleBatchProduct(item){
-  if(state.batchSelected.has(item.id))state.batchSelected.delete(item.id);else state.batchSelected.add(item.id);
-  updateBatchFavoriteUI();
-  renderResults(0);
-}
-
-function toggleFavorite(item,trigger){
-  const wasFavorite=state.favorites.has(item.id);
-  if(wasFavorite){
-    state.favorites.delete(item.id);
-    renderResults(0);
-    showToast('已取消收藏');
-    return;
-  }
-  openLibraryModal([item],trigger);
-}
-
-function favoriteBatchSelection(){
-  const count=state.batchSelected.size;
-  if(!count)return;
-  const allItems=Object.values(products).flat().map(productFromRow);
-  const items=[...state.batchSelected].map(id=>allItems.find(item=>item.id===id)).filter(Boolean);
-  openLibraryModal(items,$('#batchFavorite'));
-}
-
 function productCard(item){
   const card = document.createElement('article');
   const selected = isSelectable() && isProductSelected(item.id);
-  const favorite=state.favorites.has(item.id);
-  const batchSelected=state.batchSelected.has(item.id);
-  card.className = `product-card${selected?' selected':''}${batchSelected?' batch-selected':''}`;
+  card.className = `product-card${selected?' selected':''}`;
   card.dataset.art = item.art;
   card.style.setProperty('--photo-bg',item.photoBg);
   card.style.setProperty('--object-color',item.objectColor);
@@ -1038,20 +1037,6 @@ function productCard(item){
   photo.className = 'product-photo';
   photo.setAttribute('role','img');
   photo.setAttribute('aria-label',item.name);
-  const actions=document.createElement('div');
-  actions.className=`card-actions${favorite?' has-favorite':''}`;
-  actions.setAttribute('role','group');
-  actions.setAttribute('aria-label',`${item.name} 操作`);
-  const favoriteButton=document.createElement('button');
-  favoriteButton.type='button';favoriteButton.className=`card-action favorite-action${favorite?' active':''}`;favoriteButton.setAttribute('aria-pressed',String(favorite));favoriteButton.setAttribute('aria-label',`${favorite?'取消收藏':'收藏到物料库'} ${item.name}`);favoriteButton.title=favorite?'取消收藏':'收藏到物料库';
-  favoriteButton.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>';
-  favoriteButton.addEventListener('click',event=>{event.stopPropagation();toggleFavorite(item,event.currentTarget)});
-  const batchButton=document.createElement('button');
-  batchButton.type='button';batchButton.className=`card-action batch-card-select${batchSelected?' active':''}`;batchButton.setAttribute('aria-pressed',String(batchSelected));batchButton.setAttribute('aria-label',`${batchSelected?'取消批量选择':'批量选择'} ${item.name}`);batchButton.title=batchSelected?'取消选择':'选择';
-  batchButton.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="m8.5 12 2.4 2.4 4.8-5"/></svg>';
-  batchButton.addEventListener('click',event=>{event.stopPropagation();toggleBatchProduct(item)});
-  actions.append(favoriteButton,batchButton);
-  photo.appendChild(actions);
   if(isSelectable()){
     const select = document.createElement('button');
     select.type = 'button';
@@ -1085,14 +1070,11 @@ function renderSkeleton(){
 
 function renderResults(delay=0){
   clearTimeout(state.resultTimer);
-  if(!state.hasImage){state.batchSelected.clear();updateBatchFavoriteUI();$('#resultsStatus').textContent='';productGrid.innerHTML='';return;}
+  if(!state.hasImage){state.batchSelected.clear();$('#resultsStatus').textContent='';productGrid.innerHTML='';return;}
   $('#resultsStatus').textContent = delay ? '正在更新搜索结果…' : '';
   if(delay) renderSkeleton();
   state.resultTimer = setTimeout(()=>{
     const list = filteredProducts();
-    const visibleIds=new Set(list.map(item=>item.id));
-    state.batchSelected=new Set([...state.batchSelected].filter(id=>visibleIds.has(id)));
-    updateBatchFavoriteUI();
     productGrid.innerHTML = '';
     if(!list.length){
       const query=state.searchMode==='other'?state.otherSearchQuery:'';
@@ -1113,6 +1095,7 @@ function renderResults(delay=0){
 
 function toggleProduct(item){
   if(!isSelectable()) return;
+  if(window.blockMaterialListMutation?.())return;
   const context=currentSelectionContext();
   let group = state.selectedGroups.get(context.key);
   if(!group){group = new Map();state.selectedGroups.set(context.key,group);}
@@ -1181,6 +1164,7 @@ function renderDrawer(){
 
 function sourceForMutation(sourceId){return state.imageSources.find(source=>source.id===sourceId)||{id:'single',selectedGroups:state.selectedGroups,groupMeta:state.groupMeta}}
 function removeDrawerItem(sourceId,groupKey,productId,name){
+  if(window.blockMaterialListMutation?.())return;
   const source=sourceForMutation(sourceId);const group = source.selectedGroups.get(groupKey);
   group?.delete(productId);
   if(!group?.size) source.selectedGroups.delete(groupKey);
@@ -1192,37 +1176,10 @@ function removeDrawerItem(sourceId,groupKey,productId,name){
 }
 
 function removeDrawerGroup(sourceId,groupKey,label){
+  if(window.blockMaterialListMutation?.())return;
   const source=sourceForMutation(sourceId);source.selectedGroups.delete(groupKey);
   if(source.id===state.currentSourceId||source.id==='single'){state.selectedGroups=source.selectedGroups;saveCurrentSource();}
   updateSelectedUI();renderObjectTabs();renderResults(0);showToast(`已删除“${label}”分组中的物料`);
-}
-
-function openLibraryModal(items,trigger){
-  const list=Array.isArray(items)?items:[items];
-  if(!list.length)return;
-  state.libraryTarget={items:list,isBatch:list.length>1};
-  state.libraryTrigger=trigger;
-  $('#libraryModalDescription').textContent=list.length>1?'为选中的物料选择保存分组':'为当前物料选择保存分组';
-  $('#libraryProductName').textContent=list.length>1?`已选择 ${list.length} 项物料`:list[0].name;
-  $('#libraryGroup').value='';
-  libraryModalBackdrop.hidden=false;
-  libraryModal.hidden=false;
-  libraryModal.removeAttribute('inert');
-  libraryModal.setAttribute('aria-hidden','false');
-  document.body.style.overflow='hidden';
-  $('#libraryGroup').focus();
-}
-
-function closeLibraryModal(returnFocus=true){
-  if(libraryModal.hidden)return;
-  libraryModal.setAttribute('aria-hidden','true');
-  libraryModal.setAttribute('inert','');
-  libraryModal.hidden=true;
-  libraryModalBackdrop.hidden=true;
-  document.body.style.overflow='';
-  if(returnFocus&&state.libraryTrigger?.isConnected)state.libraryTrigger.focus({preventScroll:true});
-  state.libraryTarget=null;
-  state.libraryTrigger=null;
 }
 
 let pendingExitAction=null;
@@ -1246,6 +1203,7 @@ function requestExit(action,trigger){
   openExitModal(action,trigger);
 }
 function requestClearCurrentImage(trigger){
+  if(totalSelected()&&window.blockMaterialListMutation?.())return;
   openExitModal(clearCurrentImage,trigger,{
     title:'确认清除当前任务？',
     description:'清除后，当前任务中的所有图片、识别结果、AI 提取结果和物料清单内容都将被清空，且无法恢复。',
@@ -1279,8 +1237,7 @@ function updateFilterLabels(){
   $('#categoryValue').textContent = state.filters.category || '全部分类';
   $('#brandValue').textContent = state.filters.brand || '全部品牌';
   $('#colorValue').textContent = state.filters.color || '全部色系';
-  const sortLabel = state.sort==='price-asc'?'价格从低到高':state.sort==='price-desc'?'价格从高到低':'';
-  $('#priceValue').textContent = [state.filters.price.label,sortLabel].filter(Boolean).join(' · ') || '不限价格';
+  $('#priceValue').textContent = state.filters.price.label || '不限价格';
   renderActiveFilters();
 }
 
@@ -1288,8 +1245,7 @@ function renderActiveFilters(){
   const row = $('#activeFilters');
   row.innerHTML = '';
   const values = [
-    ['category',state.filters.category],['brand',state.filters.brand],['color',state.filters.color],['price',state.filters.price.label],
-    ['sort',state.sort==='price-asc'?'价格从低到高':state.sort==='price-desc'?'价格从高到低':'']
+    ['category',state.filters.category],['brand',state.filters.brand],['color',state.filters.color],['price',state.filters.price.label]
   ].filter(([,value])=>value);
   values.forEach(([key,value])=>{
     const button = document.createElement('button');
@@ -1424,12 +1380,7 @@ function renderPricePopover(){
     const label=min!==null&&max!==null?`¥ ${min}–${max}`:min!==null?`¥ ${min} 以上`:max!==null?`¥ ${max} 以下`:'';
     state.filters.price={label,min,max};updateFilterLabels();closeFilter();renderResults(280);
   });
-  const sort=document.createElement('section');sort.className='price-sort';sort.innerHTML='<h3>价格排序</h3><div class="price-sort-options"><button type="button" data-sort="price-asc">价格从低到高</button><button type="button" data-sort="price-desc">价格从高到低</button></div>';
-  sort.querySelectorAll('button').forEach(button=>{
-    button.classList.toggle('active',state.sort===button.dataset.sort);
-    button.addEventListener('click',()=>{state.sort=state.sort===button.dataset.sort?'default':button.dataset.sort;updateFilterLabels();closeFilter();renderResults(280)});
-  });
-  layout.append(presets,custom,sort);filterPopover.append(toolbar,layout);
+  layout.append(presets,custom);filterPopover.append(toolbar,layout);
   toolbar.querySelector('.popover-reset').addEventListener('click',()=>clearFilter('price'));
 }
 
@@ -1508,9 +1459,10 @@ $('#uploadLinkForm').addEventListener('submit',event=>{
 imageFile.addEventListener('change',event=>{startUpload(event.target.files[0],state.pendingUploadIntent);event.target.value=''});
 $('#backButton').addEventListener('click',event=>requestExit(showLanding,event.currentTarget));
 $('#brandHome').addEventListener('click',event=>requestExit(showLanding,event.currentTarget));
-$('#clearFile').addEventListener('click',event=>requestClearCurrentImage(event.currentTarget));
+$('#clearFile').addEventListener('click',()=>clearPendingUpload({focus:true}));
 $('#imageSourceInput').addEventListener('input',()=>{
-  if(!state.hasImage)$('#searchButton').disabled=!$('#imageSourceInput').value.trim();
+  if(state.pendingImageFile && $('#imageSourceInput').value!==state.pendingImageFile.name)state.pendingImageFile=null;
+  updatePendingUploadUI();
 });
 $('#imageSourceInput').addEventListener('keydown',event=>{
   if(event.key==='Enter'){event.preventDefault();$('#searchButton').click();}
@@ -1520,9 +1472,11 @@ $('#imageSourceInput').addEventListener('paste',event=>{
   if(file){event.preventDefault();startUpload(file,state.uploadIntent==='materials'?'materials':'similar');}
 });
 $('#searchButton').addEventListener('click',()=>{
+  if(state.pendingImageFile){startUpload(state.pendingImageFile,state.pendingUploadIntent);return;}
   const value=$('#imageSourceInput').value.trim();
-  if(value && (!state.hasImage || value!==state.imageName)){startUrlSearch(value,state.uploadIntent==='materials'?'materials':'similar');return;}
-  if(state.hasImage){renderResults(420);showToast('已重新执行当前图片搜索');}
+  if(value && value!==state.imageInputValue){startUrlSearch(value,state.pendingUploadIntent || state.uploadIntent);return;}
+  if(value && state.hasImage){renderResults(420);showToast('已重新执行当前图片搜索');return;}
+  showToast('请先输入图片链接或选择图片');
 });
 $('#keywordForm').addEventListener('submit',event=>{event.preventDefault();showToast('关键词搜索仅用于入口页视觉演示')});
 
@@ -1571,36 +1525,16 @@ document.addEventListener('click',event=>{if(state.openFilter&&!event.target.clo
 
 $('#selectedEntry').addEventListener('click',openDrawer);
 $('#objectGuideClose').addEventListener('click',hideObjectGuide);
-$('#batchFavorite').addEventListener('click',favoriteBatchSelection);
 $('#drawerClose').addEventListener('click',closeDrawer);
 drawerBackdrop.addEventListener('click',closeDrawer);
-$('#libraryModalClose').addEventListener('click',()=>closeLibraryModal());
-libraryModalBackdrop.addEventListener('click',()=>closeLibraryModal());
 $('#exitCancel').addEventListener('click',()=>closeExitModal());
 exitModalBackdrop.addEventListener('click',()=>closeExitModal());
 $('#exitConfirm').addEventListener('click',()=>{const action=pendingExitAction;closeExitModal(false);action?.();});
-$('#libraryGroup').addEventListener('change',event=>{
-  if(!event.target.value||!state.libraryTarget)return;
-  const target=state.libraryTarget;
-  const groupName=event.target.selectedOptions[0].textContent;
-  target.items.forEach(item=>state.favorites.add(item.id));
-  if(target.isBatch){
-    state.batchSelected.clear();
-    updateBatchFavoriteUI();
-  }
-  closeLibraryModal();
-  renderResults(0);
-  showToast(target.isBatch?`已将 ${target.items.length} 项物料收藏到${groupName}`:`已将“${target.items[0].name}”收藏到${groupName}`);
-});
 // The Excel export handler is registered by export-materials.js.
 document.addEventListener('keydown',event=>{
-  if(event.key==='Escape'){if(!exitModal.hidden)closeExitModal();else if(!libraryModal.hidden)closeLibraryModal();else if(drawer.classList.contains('open'))closeDrawer();else if(state.openFilter)closeFilter();else if(state.objectGuideVisible)hideObjectGuide();}
+  if(event.key==='Escape'){if(!exitModal.hidden)closeExitModal();else if(drawer.classList.contains('open'))closeDrawer();else if(state.openFilter)closeFilter();else if(state.objectGuideVisible)hideObjectGuide();}
   if(event.key==='Tab'&&!exitModal.hidden){
     const focusable=[...exitModal.querySelectorAll('button:not([disabled])')],first=focusable[0],last=focusable[focusable.length-1];
-    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
-  }
-  if(event.key==='Tab'&&!libraryModal.hidden){
-    const focusable=[...libraryModal.querySelectorAll('button:not([disabled]),select:not([disabled])')];const first=focusable[0],last=focusable[focusable.length-1];
     if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
   }
   if(event.key==='Tab'&&drawer.classList.contains('open')){
@@ -1686,20 +1620,18 @@ function updateFilterLabels(){
   $('#categoryValue').textContent=state.filters.category?state.filters.category.split(' / ').pop():'全部分类';
   $('#brandValue').textContent=state.filters.brand||'全部品牌';
   $('#colorValue').textContent=selectedColors.length?(selectedColors.length===1?selectedColors[0]:`${selectedColors.length} 项色系`):'全部色系';
-  const sortLabel=state.sort==='price-asc'?'价格从低到高':state.sort==='price-desc'?'价格从高到低':'';
-  $('#priceValue').textContent=[state.filters.price.label,sortLabel].filter(Boolean).join(' · ')||'不限价格';
+  $('#priceValue').textContent=state.filters.price.label||'不限价格';
   renderActiveFilters();
 }
 
 function renderActiveFilters(){
   const row=$('#activeFilters');row.innerHTML='';
-  const values=[['category',state.filters.category],['brand',state.filters.brand],...selectedColorValues().map(value=>['color',value]),['price',state.filters.price.label],['sort',state.sort==='price-asc'?'价格从低到高':state.sort==='price-desc'?'价格从高到低':'']].filter(([,value])=>value);
+  const values=[['category',state.filters.category],['brand',state.filters.brand],...selectedColorValues().map(value=>['color',value]),['price',state.filters.price.label]].filter(([,value])=>value);
   values.forEach(([key,value])=>{const button=document.createElement('button');button.type='button';button.className='filter-chip';button.innerHTML='<strong></strong><span aria-hidden="true">×</span>';button.querySelector('strong').textContent=value;button.setAttribute('aria-label',`清除筛选 ${value}`);button.addEventListener('click',()=>clearFilter(key,value));row.appendChild(button)});
 }
 
 function clearFilter(key,value){
   if(key==='price')state.filters.price={label:'',min:null,max:null};
-  else if(key==='sort')state.sort='default';
   else if(key==='color')state.filters.color=selectedColorValues().filter(item=>item!==value);
   else state.filters[key]='';
   updateFilterLabels();renderResults(260);
@@ -1717,10 +1649,10 @@ function renderCategoryPopover(){
   const list=document.createElement('div');list.className='category-list';const detail=document.createElement('div');detail.className='category-detail';
   function showTop(index){
     list.querySelectorAll('button').forEach((button,itemIndex)=>button.classList.toggle('active',itemIndex===index));
-    const [top,seconds]=fullCategoryTree[index];detail.innerHTML='<div class="category-detail-head"><div><p class="detail-eyebrow">CATEGORY</p><h3></h3></div><span></span></div>';detail.querySelector('h3').textContent=top;detail.querySelector('.category-detail-head > span').textContent=`${seconds.length} 个二级分类`;
+    const [top,seconds]=fullCategoryTree[index];detail.innerHTML='<div class="category-detail-head"><div><p class="detail-eyebrow">一级分类</p><button class="category-top-filter" type="button"><span></span><small>筛选全部</small></button></div><span></span></div>';detail.querySelector('.category-top-filter span').textContent=top;detail.querySelector('.category-top-filter').classList.toggle('active',state.filters.category===top);detail.querySelector('.category-top-filter').addEventListener('click',()=>applyCategoryPath(top));detail.querySelector('.category-detail-head > span').textContent=`${seconds.length} 个二级分类`;
     const plain=seconds.filter(([,thirds])=>!thirds.length),nested=seconds.filter(([,thirds])=>thirds.length);
-    if(plain.length){const section=document.createElement('section');section.className='category-section-block';section.innerHTML='<h4>二级分类</h4><div class="category-options"></div>';plain.forEach(([second])=>{const path=`${top} / ${second}`,button=document.createElement('button');button.type='button';button.textContent=second;button.classList.toggle('active',state.filters.category===path);button.addEventListener('click',()=>applyCategoryPath(path));section.querySelector('div').appendChild(button)});detail.appendChild(section)}
-    nested.forEach(([second,thirds])=>{const section=document.createElement('section');section.className='category-subgroup';section.innerHTML='<button class="category-subgroup-title" type="button"></button><div class="category-options"></div>';section.querySelector('.category-subgroup-title').textContent=second;section.querySelector('.category-subgroup-title').addEventListener('click',()=>applyCategoryPath(`${top} / ${second}`));thirds.forEach(third=>{const path=`${top} / ${second} / ${third}`,button=document.createElement('button');button.type='button';button.textContent=third;button.classList.toggle('active',state.filters.category===path);button.addEventListener('click',()=>applyCategoryPath(path));section.querySelector('.category-options').appendChild(button)});detail.appendChild(section)});
+    if(plain.length){const section=document.createElement('section');section.className='category-section-block category-plain-section';section.innerHTML='<h4>二级分类</h4><div class="category-options category-second-options"></div>';plain.forEach(([second])=>{const path=`${top} / ${second}`,button=document.createElement('button');button.type='button';button.className='category-second-only';button.innerHTML='<span></span><small>二级分类</small>';button.querySelector('span').textContent=second;button.classList.toggle('active',state.filters.category===path);button.addEventListener('click',()=>applyCategoryPath(path));section.querySelector('div').appendChild(button)});detail.appendChild(section)}
+    nested.forEach(([second,thirds])=>{const secondPath=`${top} / ${second}`,section=document.createElement('section');section.className='category-subgroup';section.innerHTML='<button class="category-subgroup-title" type="button"><span></span><small>筛选此二级分类</small></button><div class="category-level-label">三级分类</div><div class="category-options category-third-options"></div>';section.querySelector('.category-subgroup-title span').textContent=second;section.querySelector('.category-subgroup-title').classList.toggle('active',state.filters.category===secondPath);section.querySelector('.category-subgroup-title').addEventListener('click',()=>applyCategoryPath(secondPath));thirds.forEach(third=>{const path=`${secondPath} / ${third}`,button=document.createElement('button');button.type='button';button.textContent=third;button.classList.toggle('active',state.filters.category===path);button.addEventListener('click',()=>applyCategoryPath(path));section.querySelector('.category-options').appendChild(button)});detail.appendChild(section)});
   }
   const rebuildTopList=()=>{list.innerHTML='';fullCategoryTree.forEach(([top],index)=>{const button=document.createElement('button');button.type='button';button.innerHTML='<span></span><span>›</span>';button.firstElementChild.textContent=top;button.addEventListener('click',()=>showTop(index));button.addEventListener('mouseenter',()=>showTop(index));list.appendChild(button)})};
   rebuildTopList();
@@ -1731,11 +1663,11 @@ function renderCategoryPopover(){
 }
 
 function renderBrandPopover(){
-  const toolbar=popoverToolbar('品牌');const layout=document.createElement('div');layout.className='brand-directory-layout';layout.innerHTML='<section class="brand-shortcuts"><div><strong>最近使用</strong><div class="brand-shortcut-list recent-brands"></div></div><div><strong>常用品牌</strong><div class="brand-shortcut-list frequent-brands"></div></div><div><strong>我的收藏</strong><div class="brand-shortcut-list favorite-brands"></div></div></section><section class="brand-directory"><header><strong>全部品牌</strong><span>支持中英文名称搜索</span></header><div class="brand-directory-body"><nav class="brand-letter-index" aria-label="品牌首字母"></nav><div class="brand-directory-scroll"></div></div></section>';
-  const renderShortcut=(selector,names)=>{const box=layout.querySelector(selector);box.innerHTML='';names.slice(0,6).forEach(name=>{const button=document.createElement('button');button.type='button';button.textContent=name;button.addEventListener('click',()=>selectBrand(name));box.appendChild(button)});if(!box.children.length)box.innerHTML='<span class="brand-shortcut-empty">暂无</span>'};
+  const toolbar=popoverToolbar('品牌');const layout=document.createElement('div');layout.className='brand-directory-layout';layout.innerHTML='<section class="brand-shortcuts"><div><strong>最近使用</strong><div class="brand-shortcut-list recent-brands"></div></div><div><strong>我的收藏</strong><div class="brand-shortcut-list favorite-brands"></div></div></section><section class="brand-directory"><header><strong>全部品牌</strong><span>支持中英文名称搜索</span></header><div class="brand-directory-body"><nav class="brand-letter-index" aria-label="品牌首字母"></nav><div class="brand-directory-scroll"></div></div></section>';
+  const renderShortcut=(selector,names)=>{const box=layout.querySelector(selector);box.innerHTML='';box.parentElement.hidden=!names.length;names.slice(0,6).forEach(name=>{const button=document.createElement('button');button.type='button';button.textContent=name;button.addEventListener('click',()=>selectBrand(name));box.appendChild(button)})};
   const selectBrand=name=>{state.filters.brand=name;fullRecentBrands=rememberFilterValue(fullRecentBrands,name);writeFilterList('materialRecentBrands',fullRecentBrands);updateFilterLabels();closeFilter();renderResults(280)};
-  const renderDirectory=(query='')=>{const index=layout.querySelector('.brand-letter-index'),scroll=layout.querySelector('.brand-directory-scroll');index.innerHTML='';scroll.innerHTML='';const matches=fullBrands.filter(([english,chinese])=>`${english} ${chinese}`.toLowerCase().includes(query.toLowerCase()));const grouped=new Map();matches.forEach(item=>{const letter=/^[A-Z]/i.test(item[0])?item[0][0].toUpperCase():'#';if(!grouped.has(letter))grouped.set(letter,[]);grouped.get(letter).push(item)});'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').forEach(letter=>{const button=document.createElement('button');button.type='button';button.textContent=letter;button.disabled=!grouped.has(letter);button.addEventListener('click',()=>{const group=scroll.querySelector(`#full-brand-${letter==='#'?'other':letter}`);if(group)scroll.scrollTo({top:group.offsetTop-scroll.offsetTop,behavior:'smooth'})});index.appendChild(button)});grouped.forEach((items,letter)=>{const section=document.createElement('section');section.className='brand-letter-group';section.id=`full-brand-${letter==='#'?'other':letter}`;section.innerHTML='<h4></h4><div></div>';section.querySelector('h4').textContent=letter;items.forEach(item=>{const name=fullBrandName(item),button=document.createElement('button');button.type='button';button.className='brand-directory-item';button.innerHTML='<span><strong></strong><small></small></span><i aria-hidden="true">☆</i>';button.querySelector('strong').textContent=item[1]||item[0];button.querySelector('small').textContent=item[1]?item[0]:'';button.querySelector('i').textContent=fullFavoriteBrands.includes(name)?'★':'☆';button.querySelector('span').addEventListener('click',()=>selectBrand(name));button.querySelector('i').addEventListener('click',event=>{event.stopPropagation();fullFavoriteBrands=fullFavoriteBrands.includes(name)?fullFavoriteBrands.filter(item=>item!==name):[name,...fullFavoriteBrands];writeFilterList('materialFavoriteBrands',fullFavoriteBrands);renderShortcut('.favorite-brands',fullFavoriteBrands);renderDirectory(query)});section.querySelector('div').appendChild(button)});scroll.appendChild(section)});if(!matches.length)scroll.innerHTML='<div class="filter-empty">未找到相关品牌</div>'};
-  renderShortcut('.recent-brands',fullRecentBrands);renderShortcut('.frequent-brands',['高仪','西曼帝克','雅生','万古奇','弗洛斯','米洛提']);renderShortcut('.favorite-brands',fullFavoriteBrands);renderDirectory();filterPopover.append(toolbar,layout);toolbar.querySelector('input').addEventListener('input',event=>renderDirectory(event.target.value.trim()));toolbar.querySelector('.popover-reset').addEventListener('click',()=>clearFilter('brand'));
+  const renderDirectory=(query='')=>{const index=layout.querySelector('.brand-letter-index'),scroll=layout.querySelector('.brand-directory-scroll');index.innerHTML='';scroll.innerHTML='';const matches=fullBrands.filter(([english,chinese])=>`${english} ${chinese}`.toLowerCase().includes(query.toLowerCase()));const grouped=new Map();matches.forEach(item=>{const letter=/^[A-Z]/i.test(item[0])?item[0][0].toUpperCase():'#';if(!grouped.has(letter))grouped.set(letter,[]);grouped.get(letter).push(item)});'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('').forEach(letter=>{const button=document.createElement('button');button.type='button';button.textContent=letter;button.disabled=!grouped.has(letter);button.addEventListener('click',()=>{const group=scroll.querySelector(`#full-brand-${letter==='#'?'other':letter}`);if(group)scroll.scrollTo({top:group.offsetTop-scroll.offsetTop,behavior:'smooth'})});index.appendChild(button)});grouped.forEach((items,letter)=>{const section=document.createElement('section');section.className='brand-letter-group';section.id=`full-brand-${letter==='#'?'other':letter}`;section.innerHTML='<h4></h4><div></div>';section.querySelector('h4').textContent=letter;items.forEach(item=>{const name=fullBrandName(item),row=document.createElement('div');row.className='brand-directory-item';row.innerHTML='<button class="brand-name-button" type="button"><span><strong></strong><small></small></span></button><button class="brand-favorite-toggle" type="button"></button>';row.querySelector('strong').textContent=item[1]||item[0];row.querySelector('small').textContent=item[1]?item[0]:'';const favorite=row.querySelector('.brand-favorite-toggle'),saved=fullFavoriteBrands.includes(name);favorite.textContent=saved?'★':'☆';favorite.setAttribute('aria-pressed',String(saved));favorite.setAttribute('aria-label',`${saved?'取消收藏':'收藏品牌'} ${name}`);row.querySelector('.brand-name-button').addEventListener('click',()=>selectBrand(name));favorite.addEventListener('click',()=>{fullFavoriteBrands=saved?fullFavoriteBrands.filter(item=>item!==name):[name,...fullFavoriteBrands];writeFilterList('materialFavoriteBrands',fullFavoriteBrands);renderShortcut('.favorite-brands',fullFavoriteBrands);renderDirectory(query)});section.querySelector('div').appendChild(row)});scroll.appendChild(section)});if(!matches.length)scroll.innerHTML='<div class="filter-empty">未找到相关品牌</div>'};
+  renderShortcut('.recent-brands',fullRecentBrands);renderShortcut('.favorite-brands',fullFavoriteBrands);renderDirectory();filterPopover.append(toolbar,layout);toolbar.querySelector('input').addEventListener('input',event=>{layout.querySelector('.brand-shortcuts').hidden=Boolean(event.target.value.trim());renderDirectory(event.target.value.trim())});toolbar.querySelector('.popover-reset').addEventListener('click',()=>clearFilter('brand'));
 }
 
 function renderColorPopover(){
@@ -1746,12 +1678,12 @@ function renderColorPopover(){
 }
 
 function renderPricePopover(){
-  const toolbar=popoverToolbar('价格筛选',false),layout=document.createElement('div');layout.className='price-layout price-layout-v2';layout.innerHTML='<section class="price-filter-section"><div class="price-section-heading"><strong>价格区间</strong><span>选择常用区间，或输入自定义价格</span></div><div class="price-presets"></div><div class="price-custom"><label><span>最低价</span><input type="number" min="0" placeholder="¥ 0"></label><i>—</i><label><span>最高价</span><input type="number" min="0" placeholder="不限"></label></div></section><section class="price-sort"><div class="price-section-heading"><strong>价格排序</strong><span>控制搜索结果的价格顺序</span></div><div class="price-sort-options"><button type="button" data-sort="default">默认排序</button><button type="button" data-sort="price-asc">价格从低到高</button><button type="button" data-sort="price-desc">价格从高到低</button></div></section><footer class="filter-action-footer price-footer"><span class="price-selection-summary"></span><div><button class="footer-reset" type="button">重置</button><button class="footer-confirm" type="button">确定</button></div></footer>';
-  let pendingPrice={...state.filters.price},pendingSort=state.sort;const presets=layout.querySelector('.price-presets'),inputs=layout.querySelectorAll('.price-custom input'),summary=layout.querySelector('.price-selection-summary');inputs[0].value=pendingPrice.min??'';inputs[1].value=pendingPrice.max??'';
-  const sync=()=>{presets.querySelectorAll('button').forEach(button=>button.classList.toggle('active',button.dataset.label===(pendingPrice.label||'不限价格')));layout.querySelectorAll('.price-sort-options button').forEach(button=>button.classList.toggle('active',button.dataset.sort===pendingSort));const sortText=pendingSort==='price-asc'?'低价优先':pendingSort==='price-desc'?'高价优先':'默认排序';summary.textContent=`${pendingPrice.label||'不限价格'} · ${sortText}`};
+  const toolbar=popoverToolbar('价格筛选',false),layout=document.createElement('div');layout.className='price-layout price-layout-v2';layout.innerHTML='<section class="price-filter-section"><div class="price-section-heading"><strong>价格区间</strong><span>选择常用区间，或输入自定义价格</span></div><div class="price-presets"></div><div class="price-custom"><label><span>最低价</span><input type="number" min="0" placeholder="¥ 0"></label><i>—</i><label><span>最高价</span><input type="number" min="0" placeholder="不限"></label></div></section><footer class="filter-action-footer price-footer"><span class="price-selection-summary"></span><div><button class="footer-reset" type="button">重置</button><button class="footer-confirm" type="button">确定</button></div></footer>';
+  let pendingPrice={...state.filters.price};const presets=layout.querySelector('.price-presets'),inputs=layout.querySelectorAll('.price-custom input'),summary=layout.querySelector('.price-selection-summary');inputs[0].value=pendingPrice.min??'';inputs[1].value=pendingPrice.max??'';
+  const sync=()=>{presets.querySelectorAll('button').forEach(button=>button.classList.toggle('active',button.dataset.label===(pendingPrice.label||'不限价格')));summary.textContent=pendingPrice.label||'不限价格'};
   pricePresets.forEach(item=>{const button=document.createElement('button');button.type='button';button.dataset.label=item.label;button.textContent=item.label;button.addEventListener('click',()=>{pendingPrice=item.label==='不限价格'?{label:'',min:null,max:null}:{...item};inputs[0].value=pendingPrice.min??'';inputs[1].value=pendingPrice.max??'';sync()});presets.appendChild(button)});
-  inputs.forEach(input=>input.addEventListener('input',()=>{const min=inputs[0].value===''?null:Number(inputs[0].value),max=inputs[1].value===''?null:Number(inputs[1].value);pendingPrice={label:min!==null&&max!==null?`¥ ${min}–${max}`:min!==null?`¥ ${min} 以上`:max!==null?`¥ ${max} 以下`:'',min,max};sync()}));layout.querySelectorAll('.price-sort-options button').forEach(button=>button.addEventListener('click',()=>{pendingSort=button.dataset.sort;sync()}));
-  const resetPending=()=>{pendingPrice={label:'',min:null,max:null};pendingSort='default';inputs.forEach(input=>input.value='');sync()};toolbar.querySelector('.popover-reset').addEventListener('click',resetPending);layout.querySelector('.footer-reset').addEventListener('click',resetPending);layout.querySelector('.footer-confirm').addEventListener('click',()=>{if(pendingPrice.min!==null&&pendingPrice.max!==null&&pendingPrice.min>pendingPrice.max){showToast('最低价不能高于最高价');inputs[0].focus();return}state.filters.price=pendingPrice;state.sort=pendingSort;updateFilterLabels();closeFilter();renderResults(280)});filterPopover.append(toolbar,layout);sync();
+  inputs.forEach(input=>input.addEventListener('input',()=>{const min=inputs[0].value===''?null:Number(inputs[0].value),max=inputs[1].value===''?null:Number(inputs[1].value);pendingPrice={label:min!==null&&max!==null?`¥ ${min}–${max}`:min!==null?`¥ ${min} 以上`:max!==null?`¥ ${max} 以下`:'',min,max};sync()}));
+  const resetPending=()=>{pendingPrice={label:'',min:null,max:null};inputs.forEach(input=>input.value='');sync()};toolbar.querySelector('.popover-reset').addEventListener('click',resetPending);layout.querySelector('.footer-reset').addEventListener('click',resetPending);layout.querySelector('.footer-confirm').addEventListener('click',()=>{if(pendingPrice.min!==null&&pendingPrice.max!==null&&pendingPrice.min>pendingPrice.max){showToast('最低价不能高于最高价');inputs[0].focus();return}state.filters.price=pendingPrice;state.sort='default';updateFilterLabels();closeFilter();renderResults(280)});filterPopover.append(toolbar,layout);sync();
 }
 
 function filteredProducts(){
@@ -1760,5 +1692,5 @@ function filteredProducts(){
   if(brand)list=list.filter(item=>item.brand===brand||fullBrands.some(([english,chinese])=>fullBrandName([english,chinese])===brand&&item.brand===english));
   if(colors.length)list=list.filter(item=>colors.includes(item.color));
   if(price.min!==null)list=list.filter(item=>item.priceValue>=price.min);if(price.max!==null)list=list.filter(item=>item.priceValue<=price.max);
-  if(state.sort==='price-asc')list.sort((a,b)=>a.priceValue-b.priceValue);if(state.sort==='price-desc')list.sort((a,b)=>b.priceValue-a.priceValue);return list;
+  return list;
 }

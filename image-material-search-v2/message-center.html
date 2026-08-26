@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="兆材云库消息中心演示" />
+  <title>消息中心 - 兆材云库 Demo</title>
+  <link rel="stylesheet" href="download-center.css?v=20260825-2" />
+  <link rel="stylesheet" href="notifications.css?v=20260826-1" />
+  <link rel="stylesheet" href="message-center.css?v=20260826-1" />
+</head>
+<body>
+  <header class="account-header">
+    <a class="account-brand" href="index.html" aria-label="返回找物料"><span class="brand-mark" aria-hidden="true"><i></i></span><strong>兆材云库</strong></a>
+    <nav class="account-main-nav" aria-label="主导航"><a href="index.html">首页</a><a class="active" href="index.html">找物料</a><a href="#">看案例</a><a href="#">新材速递</a><a href="#">做项目</a></nav>
+    <div class="account-header-actions">
+      <a class="member-link" href="#">开会员送灵感币</a>
+      <button type="button">中国站⌄</button><button type="button">CNY⌄</button><button type="button">简体⌄</button>
+      <div class="notification-anchor">
+        <button class="header-icon notification-trigger" id="notificationTrigger" type="button" aria-label="通知" aria-haspopup="dialog" aria-expanded="false" aria-controls="notificationPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/><circle cx="9" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="15" cy="11" r="1"/></svg><span class="notification-badge" id="notificationBadge" hidden></span>
+        </button>
+        <section class="notification-panel" id="notificationPanel" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" tabindex="-1" hidden>
+          <header><strong id="notificationTitle">通知</strong></header>
+          <div class="notification-list" id="notificationList" aria-live="polite"></div>
+          <footer class="notification-demo-controls"><label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label></footer>
+        </section>
+      </div>
+      <span class="account-avatar" aria-label="当前用户">Z</span>
+    </div>
+  </header>
+
+  <div class="account-layout">
+    <aside class="account-sidebar" aria-label="个人中心导航">
+      <a href="#">个人首页</a><a href="#">个人资料</a><a href="#">我的收藏</a><a href="#">加入机构</a><a href="#">归口业务</a><a href="#">我的需求</a>
+      <a class="active" href="message-center.html" aria-current="page">消息中心</a>
+      <a href="download-center.html">下载中心</a><a href="#">收货地址</a><a href="#">设置</a>
+    </aside>
+
+    <main class="message-main">
+      <h1>消息中心</h1>
+      <nav class="message-tabs" id="messageTabs" aria-label="消息类型">
+        <button type="button" data-tab="business">业务消息通知 <span></span></button>
+        <button type="button" data-tab="system">系统通知 <span></span></button>
+      </nav>
+      <section class="message-list" id="messageList" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <div class="download-toast" id="downloadToast" role="status" aria-live="polite"></div>
+  <script src="notifications.js?v=20260826-4"></script>
+  <script src="message-center.js?v=20260826-2"></script>
+</body>
+</html>
