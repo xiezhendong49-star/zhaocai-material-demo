@@ -17,7 +17,7 @@
 }
 
 .download-demo-control select {
-  width: 126px;
+  width: 136px;
   height: 38px;
   padding: 0 30px 0 10px;
   border: 1px solid #dcdcd8;
@@ -25,6 +25,22 @@
   background: #fff;
   color: #3e3e3a;
   font: inherit;
+}
+
+.file-copy small {
+  display: block;
+  margin-top: 4px;
+  color: #8a8a84;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.file-copy small.is-expired {
+  color: #a05a50;
+}
+
+.status-expired i {
+  background: #9a746c;
 }
 
 .download-demo-control select:focus-visible {

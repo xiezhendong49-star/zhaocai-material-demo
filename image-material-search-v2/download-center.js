@@ -54,10 +54,19 @@
         fileName: task.fileName,
         status,
         createdAt: new Date().toISOString(),
-        unread: true
+        unread: status === 'ready' || status === 'failed'
       };
-      localStorage.setItem(notificationStorageKey, JSON.stringify([notification, ...notifications.filter(item => item.taskId !== task.id)].slice(0, 100)));
+      localStorage.setItem(notificationStorageKey, JSON.stringify([notification, ...notifications.filter(item => item.taskId !== task.id)]));
       window.dispatchEvent(new CustomEvent('download-notifications-updated'));
+      window.dispatchEvent(new CustomEvent('material-task-notification', { detail:{ taskId:task.id, status } }));
+    } catch {}
+  }
+
+  function removeDownloadNotification(taskId) {
+    try {
+      const notifications = JSON.parse(localStorage.getItem(notificationStorageKey)) || [];
+      localStorage.setItem(notificationStorageKey, JSON.stringify(notifications.filter(item => item.taskId !== taskId)));
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch {}
   }
 
@@ -66,7 +75,7 @@
     const now = Date.now();
     writeTasks([
       { id:'demo-generating', fileName:'客厅软装物料清单.xlsx', source:'图找物料', itemCount:12, sourceCount:1, createdAt:new Date(now-45000).toISOString(), status:'generating', unread:false },
-      { id:'demo-ready', fileName:'石材物料清单.xlsx', source:'图找物料', itemCount:8, sourceCount:1, createdAt:new Date(now-3600000).toISOString(), completedAt:new Date(now-3540000).toISOString(), status:'ready', unread:false },
+      { id:'demo-ready', fileName:'石材物料清单.xlsx', source:'图找物料', itemCount:8, sourceCount:1, createdAt:new Date(now-3600000).toISOString(), completedAt:new Date(now-3540000).toISOString(), expiresAt:oneYearLater(new Date(now-3540000)).toISOString(), status:'ready', unread:false },
       { id:'demo-failed', fileName:'灯具物料清单.xlsx', source:'图找物料', itemCount:6, sourceCount:1, createdAt:new Date(now-86400000).toISOString(), status:'failed', unread:false }
     ]);
   }
@@ -128,8 +137,28 @@
     return new Intl.DateTimeFormat('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).format(new Date(value));
   }
 
+  function formatDate(value) {
+    return new Intl.DateTimeFormat('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(value));
+  }
+
+  function oneYearLater(value) {
+    const date = new Date(value);
+    date.setFullYear(date.getFullYear() + 1);
+    return date;
+  }
+
+  function taskExpiresAt(task) {
+    return task.expiresAt || oneYearLater(task.completedAt || task.createdAt).toISOString();
+  }
+
+  function effectiveTask(task) {
+    if (task.status !== 'ready') return task;
+    const expiresAt = taskExpiresAt(task);
+    return { ...task, expiresAt, status:new Date(expiresAt).getTime() <= Date.now() ? 'expired' : 'ready' };
+  }
+
   function statusCopy(status) {
-    return { generating:'生成中', ready:'可下载', failed:'生成失败', cancelled:'已取消' }[status] || status;
+    return { generating:'生成中', ready:'可下载', expired:'已失效', failed:'生成失败', cancelled:'已取消' }[status] || status;
   }
 
   function updateTask(id, patch) {
@@ -139,24 +168,30 @@
     tasks[index] = { ...tasks[index], ...patch };
     writeTasks(tasks);
     render();
+    return tasks[index];
   }
 
   function renderCounts(tasks) {
-    const counts = { all:tasks.length, generating:0, ready:0, failed:0 };
+    const counts = { all:tasks.length, generating:0, ready:0, expired:0, failed:0 };
     tasks.forEach(task => { if (counts[task.status] !== undefined) counts[task.status] += 1; });
     tabs.querySelectorAll('button').forEach(button => button.querySelector('span').textContent = counts[button.dataset.status]);
   }
 
   function demoTasks() {
-    if (demoMode === 'actual') return readTasks();
+    if (demoMode === 'actual') return readTasks().map(effectiveTask);
     if (demoMode === 'empty') return [];
+    const now = Date.now();
+    const isExpiredDemo = demoInteractiveStatus === 'expired';
+    const completedAt = new Date(now - (isExpiredDemo ? 366 * 86400000 : 45000)).toISOString();
     return [{
       id:'demo-download-center-task',
       fileName:'客厅软装物料清单.xlsx',
       source:'图找物料',
       itemCount:12,
       sourceCount:1,
-      createdAt:new Date(Date.now() - 45000).toISOString(),
+      createdAt:new Date(now - (isExpiredDemo ? 367 * 86400000 : 45000)).toISOString(),
+      completedAt,
+      expiresAt:isExpiredDemo ? new Date(now - 86400000).toISOString() : oneYearLater(completedAt).toISOString(),
       status:demoInteractiveStatus,
       demo:true
     }];
@@ -180,9 +215,15 @@
       const row = document.createElement('article');
       row.className = 'download-row';
       row.dataset.taskId = task.id;
-      row.innerHTML = `<div class="file-cell"><span class="file-type">XLSX</span><div class="file-copy"><strong></strong><span></span></div></div><time class="time-cell"></time><span class="status-cell"><i></i><b></b></span><div class="row-actions"></div>`;
+      row.innerHTML = `<div class="file-cell"><span class="file-type">XLSX</span><div class="file-copy"><strong></strong><span></span><small hidden></small></div></div><time class="time-cell"></time><span class="status-cell"><i></i><b></b></span><div class="row-actions"></div>`;
       row.querySelector('.file-copy strong').textContent = task.fileName;
       row.querySelector('.file-copy span').textContent = `${task.source || '图找物料'} · ${task.itemCount || 0} 件物料${task.sourceCount > 1 ? ` · ${task.sourceCount} 张效果图` : ''}`;
+      const expiry = row.querySelector('.file-copy small');
+      if (task.status === 'ready' || task.status === 'expired') {
+        expiry.hidden = false;
+        expiry.textContent = task.status === 'expired' ? `下载链接已于 ${formatDate(task.expiresAt)} 失效` : `有效期至 ${formatDate(task.expiresAt)}`;
+        expiry.classList.toggle('is-expired', task.status === 'expired');
+      }
       row.querySelector('time').dateTime = task.createdAt;
       row.querySelector('time').textContent = formatTime(task.createdAt);
       const status = row.querySelector('.status-cell');
@@ -197,6 +238,11 @@
   }
 
   async function downloadTask(task) {
+    if (effectiveTask(task).status === 'expired') {
+      showToast('下载链接已失效，请重新生成');
+      render();
+      return;
+    }
     let blob = await readFile(task.id);
     if (!blob) { blob = await demoWorkbook(task); await storeFile(task.id, blob); }
     const url = URL.createObjectURL(blob);
@@ -212,7 +258,8 @@
     if (!task || task.status !== 'generating') return;
     const blob = await demoWorkbook(task);
     await storeFile(id, blob);
-    updateTask(id, { status:'ready', completedAt:new Date().toISOString(), unread:true });
+    const completedAt = new Date();
+    updateTask(id, { status:'ready', completedAt:completedAt.toISOString(), expiresAt:oneYearLater(completedAt).toISOString(), unread:true });
     upsertDownloadNotification(task, 'ready');
   }
 
@@ -268,8 +315,14 @@
       if (button.dataset.action === 'delete') { demoMode = 'empty'; downloadDemoState.value = 'empty'; render(); showToast('已删除下载记录'); return; }
     }
     if (button.dataset.action === 'download') { markDownloadNotificationRead(id); await downloadTask(task); }
-    if (button.dataset.action === 'cancel') { updateTask(id, { status:'cancelled', cancelledAt:new Date().toISOString(), unread:false }); showToast('已取消生成'); }
-    if (button.dataset.action === 'retry') { markDownloadNotificationRead(id); updateTask(id, { status:'generating', createdAt:new Date().toISOString(), unread:false }); setTimeout(() => finishTask(id), 1800); showToast('已重新提交生成'); }
+    if (button.dataset.action === 'cancel') { updateTask(id, { status:'cancelled', cancelledAt:new Date().toISOString(), unread:false }); removeDownloadNotification(id); showToast('已取消生成'); }
+    if (button.dataset.action === 'retry') {
+      markDownloadNotificationRead(id);
+      const retriedTask = updateTask(id, { status:'generating', createdAt:new Date().toISOString(), completedAt:null, expiresAt:null, unread:false });
+      upsertDownloadNotification(retriedTask, 'generating');
+      setTimeout(() => finishTask(id), 1800);
+      showToast('已重新提交生成');
+    }
     if (button.dataset.action === 'delete') openDeleteConfirm(task, button);
   });
 
@@ -279,6 +332,7 @@
     if (!pendingDeleteTask) return;
     const taskId = pendingDeleteTask.id;
     writeTasks(readTasks().filter(item => item.id !== taskId));
+    removeDownloadNotification(taskId);
     await deleteFile(taskId);
     closeDeleteConfirm({ restoreFocus:false });
     render();
@@ -301,7 +355,7 @@
   });
 
   const requestedDemoState = new URLSearchParams(location.search).get('demo');
-  if (downloadDemoState && ['generating','ready','failed','empty'].includes(requestedDemoState)) {
+  if (downloadDemoState && ['generating','ready','expired','failed','empty'].includes(requestedDemoState)) {
     downloadDemoState.value = requestedDemoState;
     demoMode = requestedDemoState;
     demoInteractiveStatus = requestedDemoState;

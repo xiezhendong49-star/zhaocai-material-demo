@@ -1,92 +1,23 @@
-.export-button.is-loading svg {
-  display: none;
-  animation: none;
-}
-
-.export-loading-spinner {
-  display: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(59, 53, 32, 0.28);
-  border-top-color: #3b3520;
-  border-radius: 50%;
-}
-
-.export-button.is-loading .export-loading-spinner {
-  display: block;
-  animation: export-progress-spin 0.75s linear infinite;
-}
-
 .export-action-shell {
-  position: relative;
   width: 100%;
-  overflow: hidden;
-  border-radius: 8px;
 }
 
-.export-action-shell.is-generating .export-button {
-  padding-right: 48px;
-  border-radius: 8px;
+.export-button[data-action="download-center"] {
+  border: 1px solid #d9d9d4;
+  background: #f5f5f2;
+  color: #242421;
 }
 
-.export-cancel-segment {
-  position: absolute;
-  inset-block: 0;
-  right: 0;
-  z-index: 2;
-  width: 118px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 8px 0 0 8px;
-  background: #c83f3a;
-  color: #fffaf7;
-  box-shadow: -8px 0 18px rgba(91, 24, 22, 0.16);
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  transform: translateX(74px);
-  transition: transform 210ms cubic-bezier(.22, 1, .36, 1), background-color 160ms ease-out;
-}
-
-.export-cancel-segment[hidden] {
-  display: none;
-}
-
-.export-cancel-segment:hover,
-.export-cancel-segment:focus-visible {
-  transform: translateX(0);
-  background: #b8322e;
-}
-
-.export-cancel-segment:focus-visible {
-  outline: 2px solid #1f6feb;
-  outline-offset: -3px;
-}
-
-.export-cancel-segment svg {
-  order: -1;
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-  fill: none;
+.export-button[data-action="download-center"] svg {
   stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
 }
 
-@keyframes export-progress-spin {
-  to { transform: rotate(360deg); }
+.export-button[data-action="download-center"]:hover {
+  border-color: #c9a900;
+  background: #fff8cf;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .export-button.is-loading .export-loading-spinner {
-    animation: none;
-  }
-
-  .export-cancel-segment {
-    transition: none;
-  }
+.export-button[data-action="download-center"]:focus-visible {
+  outline: 2px solid #1f6feb;
+  outline-offset: 2px;
 }

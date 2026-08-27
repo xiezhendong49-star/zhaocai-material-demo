@@ -7,11 +7,15 @@
   const panel = document.querySelector('#notificationPanel');
   const list = document.querySelector('#notificationList');
   const demoState = document.querySelector('#notificationDemoState');
+  const clearReadButton = document.querySelector('#clearReadNotifications');
   if (!trigger || !badge || !panel || !list) return;
 
   let scrollGuardUntil = 0;
   let lastPointer = null;
+  let autoCloseTimer = null;
+  let autoCloseArmed = false;
   const demoReadIds = new Set();
+  const demoClearedIds = new Set();
 
   function readNotifications() {
     try { return JSON.parse(localStorage.getItem(storageKey)) || []; }
@@ -20,7 +24,7 @@
 
   function writeNotifications(notifications) {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(notifications.slice(0, 100)));
+      localStorage.setItem(storageKey, JSON.stringify(notifications));
       window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch {}
   }
@@ -75,25 +79,32 @@
   function visibleNotifications() {
     const state = currentDemoState();
     if (state === 'empty') return [];
-    if (state === 'mixed') return mixedSamples().map(item => demoReadIds.has(item.id) ? { ...item, unread:false } : item);
-    if (state === 'success') return [sampleNotification({ id:'demo-download-ready', taskId:'demo-task-ready', status:'ready', fileName:'物料清单_演示.xlsx', unread:!demoReadIds.has('demo-download-ready') })];
-    if (state === 'failed') return [sampleNotification({ id:'demo-download-failed', taskId:'demo-task-failed', status:'failed', fileName:'物料清单_失败演示.xlsx', unread:!demoReadIds.has('demo-download-failed') })];
-    if (state === 'read') return mixedSamples().map(item => ({ ...item, unread:false }));
+    const applyDemoState = items => items
+      .filter(item => !demoClearedIds.has(item.id))
+      .map(item => demoReadIds.has(item.id) ? { ...item, unread:false } : item);
+    if (state === 'generating') return applyDemoState([sampleNotification({ id:'demo-download-generating', taskId:'demo-task-generating', status:'generating', fileName:'物料清单_生成中.xlsx', unread:false })]);
+    if (state === 'mixed') return applyDemoState(mixedSamples());
+    if (state === 'success') return applyDemoState([sampleNotification({ id:'demo-download-ready', taskId:'demo-task-ready', status:'ready', fileName:'物料清单_演示.xlsx', unread:true })]);
+    if (state === 'failed') return applyDemoState([sampleNotification({ id:'demo-download-failed', taskId:'demo-task-failed', status:'failed', fileName:'物料清单_失败演示.xlsx', unread:true })]);
+    if (state === 'read') return applyDemoState(mixedSamples().map(item => ({ ...item, unread:false })));
     return readNotifications().slice().sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt));
   }
 
   function normalizedNotification(notification) {
     if (notification.type === 'business' || notification.type === 'system') return notification;
+    const generating = notification.status === 'generating';
     const failed = notification.status === 'failed';
     return {
       ...notification,
       type:'download',
-      title:failed ? '物料清单生成失败' : '物料清单已生成',
-      description:failed
-        ? '物料清单生成失败，请稍后重试；生成记录可在下载中心查看。'
-        : '物料清单已生成，可直接下载；生成记录可在下载中心查看。',
-      actionType:failed ? 'retry' : 'download',
-      actionLabel:failed ? '重新生成' : '下载'
+      title:generating ? '物料清单生成中' : failed ? '物料清单生成失败' : '物料清单已生成',
+      description:generating
+        ? '您可以继续操作，生成完成后将在这里通知您。'
+        : failed
+          ? '可前往下载中心重新生成。'
+          : '请前往下载中心下载，下载链接有效期为一年。',
+      actionType:generating ? 'progress' : 'download-center',
+      actionLabel:generating ? '查看生成进度' : '前往下载中心'
     };
   }
 
@@ -122,6 +133,11 @@
   function render() {
     const notifications = visibleNotifications().map(normalizedNotification);
     updateBadge(notifications);
+    if (clearReadButton) {
+      const clearableCount = notifications.filter(item => !item.unread && item.status !== 'generating').length;
+      clearReadButton.disabled = clearableCount === 0;
+      clearReadButton.setAttribute('aria-label', clearableCount ? `清除 ${clearableCount} 条已读通知` : '暂无已读通知可清除');
+    }
     list.innerHTML = '';
     if (!notifications.length) {
       list.innerHTML = '<div class="notification-empty"><div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/></svg><strong>暂无通知</strong><span>新的业务、系统或任务结果会显示在这里</span></div></div>';
@@ -129,10 +145,12 @@
     }
     notifications.forEach(notification => {
       const item = document.createElement('article');
-      item.className = `notification-item notification-${notification.type}${notification.unread ? ' is-unread' : ''}`;
+      item.className = `notification-item notification-${notification.type}${notification.unread ? ' is-unread' : ''}${notification.status === 'generating' ? ' is-generating' : ''}`;
       item.dataset.notificationId = notification.id;
+      item.dataset.notificationStatus = notification.status || '';
       item.tabIndex = 0;
-      item.innerHTML = '<div class="notification-title-row"><strong></strong><i aria-label="未读"></i></div><p></p><div class="notification-meta"><time></time><button class="notification-action" type="button" hidden></button></div>';
+      item.innerHTML = '<div class="notification-title-row"><strong></strong><i aria-label="未读"></i></div><button class="notification-clear" type="button" aria-label="清除此通知" title="清除此通知"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button><p></p><div class="notification-meta"><time></time><button class="notification-action" type="button" hidden></button></div>';
+      item.querySelector('.notification-clear').hidden = notification.status === 'generating';
       item.querySelector('strong').textContent = notification.title || '通知';
       const body = item.querySelector('p');
       body.textContent = notification.description || '';
@@ -154,11 +172,47 @@
     });
   }
 
-  function setOpen(open, { returnFocus = false } = {}) {
+  function clearAutoClose() {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = null;
+  }
+
+  function scheduleAutoClose() {
+    clearAutoClose();
+    autoCloseArmed = true;
+    autoCloseTimer = setTimeout(() => {
+      autoCloseArmed = false;
+      setOpen(false);
+    }, 6000);
+  }
+
+  function setOpen(open, { returnFocus = false, focusPanel = true } = {}) {
     panel.hidden = !open;
     trigger.setAttribute('aria-expanded', String(open));
-    if (open) panel.focus({ preventScroll:true });
+    if (!open) clearAutoClose();
+    if (open && focusPanel) panel.focus({ preventScroll:true });
     else if (returnFocus) trigger.focus({ preventScroll:true });
+  }
+
+  function clearNotificationsByIds(ids) {
+    if (!ids.length) return;
+    if (currentDemoState() !== 'actual') {
+      ids.forEach(id => demoClearedIds.add(id));
+      render();
+      return;
+    }
+    const notifications = readNotifications();
+    const removed = notifications.filter(item => ids.includes(item.id));
+    if (!removed.length) return;
+    writeNotifications(notifications.filter(item => !ids.includes(item.id)));
+    render();
+  }
+
+  function clearReadNotifications() {
+    const ids = visibleNotifications()
+      .filter(item => !item.unread && item.status !== 'generating')
+      .map(item => item.id);
+    clearNotificationsByIds(ids);
   }
 
   function markNotificationRead(id) {
@@ -257,8 +311,20 @@
     markNotificationRead(item.dataset.notificationId);
   }
 
-  trigger.addEventListener('click', () => setOpen(panel.hidden));
-  demoState?.addEventListener('change', () => { demoReadIds.clear(); render(); });
+  trigger.addEventListener('click', () => {
+    autoCloseArmed = false;
+    clearAutoClose();
+    setOpen(panel.hidden);
+  });
+  demoState?.addEventListener('change', () => { demoReadIds.clear();demoClearedIds.clear();render(); });
+  clearReadButton?.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    clearReadNotifications();
+    setOpen(true, { focusPanel:false });
+  });
+  panel.addEventListener('pointerenter', () => { if (autoCloseArmed) clearAutoClose(); });
+  panel.addEventListener('pointerleave', () => { if (autoCloseArmed) scheduleAutoClose(); });
   document.addEventListener('click', event => {
     if (!panel.hidden && !event.target.closest('.notification-anchor')) setOpen(false);
   });
@@ -282,13 +348,19 @@
     const item = event.target.closest('.notification-item');
     if (!item) return;
     const id = item.dataset.notificationId;
+    if (event.target.closest('.notification-clear')) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearNotificationsByIds([id]);
+      setOpen(true, { focusPanel:false });
+      return;
+    }
     const notification = visibleNotifications().map(normalizedNotification).find(entry => entry.id === id);
     if (!notification) return;
     markNotificationRead(id);
     const action = event.target.closest('.notification-action');
     if (!action) return;
-    if (action.dataset.action === 'download') await downloadFromNotification(notification);
-    if (action.dataset.action === 'retry') retryTask(notification);
+    if (['progress','download-center'].includes(action.dataset.action)) window.open('download-center.html', '_blank', 'noopener');
     if (action.dataset.action === 'message') openMessage(notification);
   });
   list.addEventListener('keydown', async event => {
@@ -300,10 +372,16 @@
   });
   window.addEventListener('download-notifications-updated', render);
   window.addEventListener('notifications-updated', render);
+  window.addEventListener('material-task-notification', event => {
+    render();
+    if (document.visibilityState !== 'visible') return;
+    setOpen(true, { focusPanel:false });
+    scheduleAutoClose();
+  });
   window.addEventListener('storage', event => { if (event.key === storageKey) render(); });
 
-  window.zhaocaiNotifications = { markRead:markNotificationRead, markReadByTask:markNotificationReadByTask, render };
+  window.zhaocaiNotifications = { markRead:markNotificationRead, markReadByTask:markNotificationReadByTask, render, clearRead:clearReadNotifications };
   const requestedDemo = new URLSearchParams(location.search).get('notice');
-  if (demoState && ['empty','mixed','success','failed','read'].includes(requestedDemo)) demoState.value = requestedDemo;
+  if (demoState && ['empty','generating','mixed','success','failed','read'].includes(requestedDemo)) demoState.value = requestedDemo;
   render();
 })();

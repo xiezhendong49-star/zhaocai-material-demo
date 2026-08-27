@@ -3,14 +3,19 @@
   const exportButtonWrap = document.querySelector('#exportButtonWrap');
   const exportActionShell = document.querySelector('#exportActionShell');
   const exportHint = document.querySelector('#exportHint');
-  const cancelExport = document.querySelector('#cancelExport');
   const exportStateDemo = document.querySelector('#exportStateDemo');
   const taskStorageKey = 'materialDownloadTasks';
   const notificationStorageKey = 'materialDownloadNotifications';
   const fileDatabaseName = 'zhaocai-material-downloads';
-  let isExporting = false;
-  let activeExport = null;
-  let currentVersionTaskId = null;
+
+  const demoStates = {
+    empty: { disabled:true, action:'none', label:'生成物料清单', hint:'请先选择至少一项物料，生成任务将在下载中心处理。' },
+    pending: { disabled:false, action:'generate-demo', label:'生成物料清单', hint:'将根据当前已选物料生成清单，提交后可继续修改。' },
+    generating: { disabled:false, action:'download-center', label:'前往下载中心', hint:'该版本正在生成，生成进度请前往下载中心查看。' },
+    success: { disabled:false, action:'download-center', label:'前往下载中心', hint:'该版本已生成，请前往下载中心查看或下载。' },
+    failed: { disabled:false, action:'download-center', label:'前往下载中心', hint:'该版本生成失败，请前往下载中心重新生成。' },
+    modified: { disabled:false, action:'generate-demo', label:'生成物料清单', hint:'当前清单与已提交版本不一致，请重新生成物料清单。' }
+  };
 
   function readTasks() {
     try { return JSON.parse(localStorage.getItem(taskStorageKey)) || []; }
@@ -34,11 +39,12 @@
       fileName: task.fileName,
       status,
       createdAt: new Date().toISOString(),
-      unread: true
+      unread: status === 'ready' || status === 'failed'
     };
     try {
-      localStorage.setItem(notificationStorageKey, JSON.stringify([notification, ...notifications.filter(item => item.taskId !== task.id)].slice(0, 100)));
+      localStorage.setItem(notificationStorageKey, JSON.stringify([notification, ...notifications.filter(item => item.taskId !== task.id)]));
       window.dispatchEvent(new Event('download-notifications-updated'));
+      window.dispatchEvent(new CustomEvent('material-task-notification', { detail:{ taskId:task.id, status } }));
     } catch {}
   }
 
@@ -51,13 +57,8 @@
     return tasks.find(task => task.id === id);
   }
 
-  function latestReadyTask(signature = '') {
-    return readTasks().find(task => task.status === 'ready' && (!signature || task.snapshotSignature === signature));
-  }
-
-  function currentVersionTask() {
-    if (!currentVersionTaskId) return null;
-    return readTasks().find(task => task.id === currentVersionTaskId && task.status === 'ready') || null;
+  function submittedTask(signature = '') {
+    return readTasks().find(task => ['generating','ready','failed'].includes(task.status) && (!signature || task.snapshotSignature === signature));
   }
 
   function openFileDatabase() {
@@ -103,15 +104,8 @@
     return { sources, signature: snapshotSignature(sources) };
   }
 
-  function demoStateActive() {
-    return exportStateDemo && exportStateDemo.value !== 'auto';
-  }
-
-  function blockMaterialListMutation() {
-    const generationLocked = isExporting || exportStateDemo?.value === 'generating';
-    if (!generationLocked) return false;
-    showToast('当前物料清单正在生成，如需修改，请先取消物料清单生成');
-    return true;
+  function taskStillGenerating(id) {
+    return readTasks().some(task => task.id === id && task.status === 'generating');
   }
 
   function setExportHint(message) {
@@ -134,68 +128,38 @@
     );
   }
 
-  function updateCancelControl(isGenerating) {
-    cancelExport.hidden = !isGenerating;
-    exportActionShell?.classList.toggle('is-generating', isGenerating);
-  }
-
-  function applyDemoState(total) {
-    if (!demoStateActive()) return false;
-    const demoState = exportStateDemo.value;
-    const isEmpty = total === 0;
-    const states = {
-      empty: { label: '导出物料清单', hint: '请先选择至少一项物料，已生成的物料清单可在下载中心查看。', empty: true },
-      initial: { label: '导出物料清单', hint: isEmpty ? '请先选择至少一项物料，已生成的物料清单可在下载中心查看。' : '将导出全部效果图及其对应的已选物料，已生成的物料清单可在下载中心查看。' },
-      generating: { label: '正在生成物料清单…', hint: '您可以停留或离开此页面，后续可在下载中心查看生成进度。', loading: true },
-      success: { label: '下载物料清单', hint: '物料清单已生成，可直接下载；生成记录可在下载中心查看。' },
-      changed: { label: '导出物料清单', hint: '清单已更新，请重新导出物料清单；已生成的物料清单可在下载中心查看。' },
-      failed: { label: '重新生成物料清单', hint: '物料清单生成失败，请稍后重试；生成记录可在下载中心查看。' }
-    };
-    const stateView = states[demoState] || states.initial;
-    const emptyView = Boolean(stateView.empty || (demoState === 'initial' && isEmpty));
-    exportButton.disabled = Boolean(stateView.loading || emptyView);
-    exportButton.setAttribute('aria-busy', String(Boolean(stateView.loading)));
-    exportButton.classList.toggle('is-loading', Boolean(stateView.loading));
-    exportButton.querySelector('span').textContent = stateView.label;
-    exportButtonWrap.classList.toggle('is-empty', emptyView);
-    exportButtonWrap.title = emptyView ? '请先选择至少一项物料' : '';
-    updateCancelControl(Boolean(stateView.loading));
-    setExportHint(stateView.hint);
-    return true;
-  }
-
   function updateExportButton(total = totalSelected()) {
     if (!exportButton || !exportButtonWrap || !exportHint) return;
-    if (exportStateDemo) exportStateDemo.disabled = isExporting;
-    if (!isExporting && applyDemoState(total)) return;
+    const demoState = exportStateDemo?.value || 'actual';
+    const demoConfig = demoState === 'actual' ? null : demoStates[demoState];
+    if (demoConfig) {
+      exportButton.disabled = demoConfig.disabled;
+      exportButton.setAttribute('aria-busy', 'false');
+      exportButton.classList.remove('is-loading');
+      exportButton.dataset.action = demoConfig.action;
+      exportButton.querySelector('span').textContent = demoConfig.label;
+      exportButtonWrap.classList.toggle('is-empty', demoConfig.disabled);
+      exportButtonWrap.title = demoConfig.disabled ? '请先选择至少一项物料' : '';
+      exportActionShell?.classList.remove('is-generating');
+      setExportHint(demoConfig.hint);
+      return;
+    }
     const isEmpty = total === 0;
     const snapshot = isEmpty ? null : currentSnapshot();
-    const matchingTask = snapshot ? latestReadyTask(snapshot.signature) : null;
-    if (matchingTask) currentVersionTaskId = matchingTask.id;
-    const previousTask = currentVersionTask() || latestReadyTask();
-    const hasChanges = Boolean(!isEmpty && previousTask && !matchingTask);
-    exportButton.disabled = isExporting || isEmpty;
-    exportButton.setAttribute('aria-busy', String(isExporting));
-    exportButton.classList.toggle('is-loading', isExporting);
-    exportButton.querySelector('span').textContent = isExporting
-      ? '正在生成物料清单…'
+    const matchingTask = snapshot ? submittedTask(snapshot.signature) : null;
+    exportButton.disabled = isEmpty;
+    exportButton.setAttribute('aria-busy', 'false');
+    exportButton.classList.remove('is-loading');
+    exportButton.dataset.action = matchingTask ? 'download-center' : 'generate';
+    exportButton.querySelector('span').textContent = matchingTask ? '前往下载中心' : '生成物料清单';
+    exportButtonWrap.classList.toggle('is-empty', isEmpty);
+    exportButtonWrap.title = isEmpty ? '请先选择至少一项物料' : '';
+    exportActionShell?.classList.remove('is-generating');
+    setExportHint(isEmpty
+      ? '请先选择至少一项物料，生成任务将在下载中心处理。'
       : matchingTask
-        ? '下载物料清单'
-        : hasChanges
-          ? '导出物料清单'
-          : '导出物料清单';
-    exportButtonWrap.classList.toggle('is-empty', isEmpty && !isExporting);
-    exportButtonWrap.title = isEmpty && !isExporting ? '请先选择至少一项物料' : '';
-    updateCancelControl(isExporting);
-    setExportHint(isExporting
-      ? '您可以停留或离开此页面，后续可在下载中心查看生成进度。'
-      : isEmpty
-        ? '请先选择至少一项物料，已生成的物料清单可在下载中心查看。'
-        : matchingTask
-          ? '物料清单已生成，可直接下载；生成记录可在下载中心查看。'
-          : hasChanges
-            ? '清单已更新，请重新导出物料清单；已生成的物料清单可在下载中心查看。'
-            : '将导出全部效果图及其对应的已选物料，已生成的物料清单可在下载中心查看。');
+        ? '该版本已提交，生成进度和文件下载请前往下载中心查看。'
+        : '将根据当前已选物料生成清单，提交后可继续修改。');
   }
 
   function exportSourcesSnapshot() {
@@ -373,27 +337,29 @@
     }
   }
 
-  function waitForGeneration(token, duration = 1100) {
-    return new Promise(resolve => {
-      const timer = setTimeout(resolve, duration);
-      token.cancelTimer = () => { clearTimeout(timer); resolve(); };
-    });
+  function waitForGeneration(duration = 1800) {
+    return new Promise(resolve => setTimeout(resolve, duration));
   }
 
   async function exportMaterialsList() {
-    if (demoStateActive()) {
-      showToast('当前为演示状态，请通过下拉框切换状态');
+    const demoState = exportStateDemo?.value || 'actual';
+    if (demoState !== 'actual') {
+      if (demoState === 'empty') return;
+      if (['generating', 'success', 'failed'].includes(demoState)) {
+        window.open('download-center.html', '_blank', 'noopener');
+        return;
+      }
+      exportStateDemo.value = 'generating';
+      updateExportButton();
       return;
     }
-    if (isExporting || totalSelected() === 0) return;
+    if (totalSelected() === 0) return;
     const existingSnapshot = currentSnapshot();
-    const matchingTask = latestReadyTask(existingSnapshot.signature);
+    const matchingTask = submittedTask(existingSnapshot.signature);
     if (matchingTask) {
-      currentVersionTaskId = matchingTask.id;
-      await downloadTask(matchingTask);
+      window.open('download-center.html', '_blank', 'noopener');
       return;
     }
-    const token = { cancelled: false, cancelTimer: null };
     const itemCount = existingSnapshot.sources.reduce((sum, source) => sum + source.materials.length, 0);
     const task = {
       id: `material-list-${Date.now()}`,
@@ -407,62 +373,31 @@
       unread: false
     };
     updateTask(task.id, task);
-    activeExport = { token, task };
-    isExporting = true;
+    upsertDownloadNotification(task, 'generating');
     updateExportButton();
     try {
-      await waitForGeneration(token);
-      if (token.cancelled) return;
+      await waitForGeneration();
+      if (!taskStillGenerating(task.id)) return;
       const buffer = await buildMaterialsWorkbook(existingSnapshot.sources);
-      if (token.cancelled) return;
+      if (!taskStillGenerating(task.id)) return;
       const blob = workbookBlob(buffer);
       await storeFile(task.id, blob);
-      updateTask(task.id, { status: 'ready', completedAt: new Date().toISOString(), unread: true });
-      currentVersionTaskId = task.id;
+      const completedAt = new Date();
+      const expiresAt = new Date(completedAt);
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      updateTask(task.id, { status: 'ready', completedAt: completedAt.toISOString(), expiresAt: expiresAt.toISOString(), unread: true });
       upsertDownloadNotification(task, 'ready');
-      const latestSnapshot = totalSelected() ? currentSnapshot() : null;
-      if (latestSnapshot?.signature === existingSnapshot.signature) {
-        downloadBlob(blob, task.fileName);
-        updateTask(task.id, { downloadedAt: new Date().toISOString(), unread: false });
-      }
-      showToast('物料清单已生成，可直接下载；生成记录可在下载中心查看。');
     } catch (error) {
-      if (token.cancelled) return;
-      console.error('Failed to export materials list', error);
+      console.error('Failed to generate materials list', error);
       updateTask(task.id, { status: 'failed', error: '生成失败，请重新尝试' });
       upsertDownloadNotification(task, 'failed');
-      showToast('物料清单生成失败，请稍后重试；生成记录可在下载中心查看。');
     } finally {
-      if (activeExport?.token === token) {
-        isExporting = false;
-        activeExport = null;
-        updateExportButton();
-      }
-    }
-  }
-
-  function cancelCurrentExport() {
-    if (!activeExport && demoStateActive()) {
-      exportStateDemo.value = 'initial';
       updateExportButton();
-      showToast('已取消生成。');
-      return;
     }
-    if (!activeExport) return;
-    const { token, task } = activeExport;
-    token.cancelled = true;
-    token.cancelTimer?.();
-    updateTask(task.id, { status: 'cancelled', cancelledAt: new Date().toISOString(), unread: false });
-    activeExport = null;
-    isExporting = false;
-    updateExportButton();
-    showToast('已取消生成。');
   }
 
   window.updateExportButton = updateExportButton;
-  window.blockMaterialListMutation = blockMaterialListMutation;
   exportButton?.addEventListener('click', exportMaterialsList);
-  cancelExport?.addEventListener('click', cancelCurrentExport);
   exportStateDemo?.addEventListener('change', () => updateExportButton());
   updateExportButton();
 })();

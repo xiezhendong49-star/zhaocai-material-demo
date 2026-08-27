@@ -6,8 +6,8 @@
   <meta name="description" content="兆材云库单品图找物料与空间图找物料交互 Demo" />
   <title>图片找物料 - 兆材云库 Demo</title>
   <link rel="stylesheet" href="styles.css?v=20260826-3" />
-  <link rel="stylesheet" href="export-feedback.css?v=20260825-4" />
-  <link rel="stylesheet" href="notifications.css?v=20260826-2" />
+  <link rel="stylesheet" href="export-feedback.css?v=20260826-2" />
+  <link rel="stylesheet" href="notifications.css?v=20260826-4" />
 </head>
 <body>
   <header class="site-header">
@@ -35,18 +35,19 @@
           <section class="notification-panel" id="notificationPanel" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" tabindex="-1" hidden>
             <header>
               <strong id="notificationTitle">通知</strong>
+              <button class="notification-clear-read" id="clearReadNotifications" type="button" disabled>清除已读</button>
             </header>
             <div class="notification-list" id="notificationList" aria-live="polite"></div>
             <nav class="notification-history-links" aria-label="通知历史入口">
               <span>查看历史</span>
               <div>
-                <a href="message-center.html">消息中心</a>
+                <a href="message-center.html" target="_blank" rel="noopener">消息中心</a>
                 <i aria-hidden="true"></i>
-                <a href="download-center.html">下载中心</a>
+                <a href="download-center.html" target="_blank" rel="noopener">下载中心</a>
               </div>
             </nav>
             <footer class="notification-demo-controls">
-              <label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无通知</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label>
+              <label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无通知</option><option value="generating">生成中</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label>
             </footer>
           </section>
         </div>
@@ -248,31 +249,26 @@
     <div class="drawer-content" id="drawerContent"></div>
     <footer class="drawer-footer">
       <label class="export-demo-control" for="exportStateDemo">
-        <span>清单状态演示</span>
+        <span>生成状态演示</span>
         <select id="exportStateDemo">
-          <option value="auto">跟随实际状态</option>
-          <option value="empty">无物料可导出</option>
-          <option value="initial">待生成</option>
+          <option value="actual">跟随实际状态</option>
+          <option value="empty">无物料可生成</option>
+          <option value="pending">待生成</option>
           <option value="generating">生成中</option>
           <option value="success">生成成功</option>
-          <option value="changed">清单已修改</option>
           <option value="failed">生成失败</option>
+          <option value="modified">清单已修改</option>
         </select>
       </label>
       <div class="export-action-shell" id="exportActionShell">
         <span class="export-button-wrap is-empty" id="exportButtonWrap" title="请先选择至少一项物料">
           <button class="export-button" id="exportButton" type="button" aria-describedby="exportHint" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
-            <i class="export-loading-spinner" aria-hidden="true"></i>
-            <span>导出物料清单</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 11h6M9 15h6"/></svg>
+            <span>生成物料清单</span>
           </button>
         </span>
-        <button class="export-cancel-segment" id="cancelExport" type="button" aria-label="取消生成物料清单" hidden>
-          <span>取消生成</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
-        </button>
       </div>
-      <p id="exportHint">请先选择至少一项物料</p>
+      <p id="exportHint">请先选择至少一项物料，生成任务将在下载中心处理。</p>
     </footer>
   </aside>
 
@@ -289,8 +285,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="exceljs.min.js?v=4.4.0"></script>
   <script src="app.js?v=20260826-6"></script>
-  <script src="export-materials.js?v=20260826-1"></script>
-  <script src="notifications.js?v=20260826-5"></script>
+  <script src="export-materials.js?v=20260827-1"></script>
+  <script src="notifications.js?v=20260827-1"></script>
   <script src="./result-pipeline.js?v=20260821-1"></script>
 </body>
 </html>

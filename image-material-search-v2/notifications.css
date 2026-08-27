@@ -16,6 +16,8 @@
 
 .notification-trigger:focus-visible,
 .notification-action:focus-visible,
+.notification-clear-read:focus-visible,
+.notification-clear:focus-visible,
 .notification-history-links a:focus-visible,
 .notification-panel select:focus-visible {
   outline: 2px solid oklch(0.55 0.18 255);
@@ -69,11 +71,31 @@
   border-bottom: 1px solid oklch(0.92 0.006 90);
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .notification-panel > header strong {
   color: oklch(0.24 0.01 90);
   font-size: 16px;
+}
+
+.notification-clear-read {
+  min-height: 28px;
+  padding: 0 4px;
+  color: oklch(0.5 0.12 255);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.notification-clear-read:hover:not(:disabled) {
+  color: oklch(0.4 0.17 255);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.notification-clear-read:disabled {
+  color: oklch(0.72 0.006 90);
+  cursor: default;
 }
 
 .notification-list {
@@ -85,10 +107,49 @@
 .notification-item {
   position: relative;
   min-height: 88px;
-  padding: 13px 18px 12px;
+  padding: 13px 42px 12px 18px;
   border-bottom: 1px solid oklch(0.93 0.006 90);
   cursor: default;
   transition: background-color 120ms ease;
+}
+
+.notification-clear {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  color: oklch(0.62 0.008 90);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.notification-item:hover .notification-clear,
+.notification-clear:focus-visible {
+  opacity: 1;
+}
+
+.notification-clear:hover {
+  background: oklch(0.94 0.012 28);
+  color: oklch(0.5 0.18 28);
+}
+
+.notification-clear svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.notification-item.is-generating .notification-title-row i {
+  display: block;
+  background: oklch(0.73 0.15 85);
+  animation: notification-generating-pulse 1.2s ease-in-out infinite;
 }
 
 .notification-item:hover,
@@ -302,6 +363,10 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes notification-generating-pulse {
+  50% { opacity: .35; transform: scale(.82); }
+}
+
 @media (max-width: 640px) {
   .notification-panel {
     position: fixed;
@@ -319,5 +384,9 @@
 
   .notification-item {
     transition: none;
+  }
+
+  .notification-item.is-generating .notification-title-row i {
+    animation: none;
   }
 }
