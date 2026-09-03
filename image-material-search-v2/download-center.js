@@ -17,6 +17,7 @@
   let toastTimer;
   let pendingDeleteTask = null;
   let deleteTrigger = null;
+  let targetTaskId = new URLSearchParams(location.search).get('taskId') || '';
 
   function showToast(message) {
     clearTimeout(toastTimer);
@@ -31,19 +32,22 @@
   }
 
   function writeTasks(tasks) {
-    localStorage.setItem(storageKey, JSON.stringify(tasks.slice(0, 30)));
+    localStorage.setItem(storageKey, JSON.stringify(tasks));
   }
 
   function markDownloadNotificationRead(taskId) {
     try {
       const notifications = JSON.parse(localStorage.getItem(notificationStorageKey)) || [];
-      const next = notifications.map(item => item.taskId === taskId ? { ...item, unread:false, readAt:new Date().toISOString() } : item);
+      const next = notifications.map(item => item.taskId === taskId
+        ? { ...item, topUnread:false, topReadAt:new Date().toISOString() }
+        : item);
       localStorage.setItem(notificationStorageKey, JSON.stringify(next));
       window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch {}
   }
 
   function upsertDownloadNotification(task, status) {
+    if (!['ready', 'failed'].includes(status)) return;
     try {
       const notifications = JSON.parse(localStorage.getItem(notificationStorageKey)) || [];
       const existing = notifications.find(item => item.taskId === task.id);
@@ -54,19 +58,11 @@
         fileName: task.fileName,
         status,
         createdAt: new Date().toISOString(),
-        unread: status === 'ready' || status === 'failed'
+        topUnread: true
       };
       localStorage.setItem(notificationStorageKey, JSON.stringify([notification, ...notifications.filter(item => item.taskId !== task.id)]));
       window.dispatchEvent(new CustomEvent('download-notifications-updated'));
       window.dispatchEvent(new CustomEvent('material-task-notification', { detail:{ taskId:task.id, status } }));
-    } catch {}
-  }
-
-  function removeDownloadNotification(taskId) {
-    try {
-      const notifications = JSON.parse(localStorage.getItem(notificationStorageKey)) || [];
-      localStorage.setItem(notificationStorageKey, JSON.stringify(notifications.filter(item => item.taskId !== taskId)));
-      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch {}
   }
 
@@ -158,7 +154,7 @@
   }
 
   function statusCopy(status) {
-    return { generating:'生成中', ready:'可下载', expired:'已失效', failed:'生成失败', cancelled:'已取消' }[status] || status;
+    return { generating:'生成中', ready:'可下载', expired:'已过期', failed:'生成失败', cancelled:'已取消' }[status] || status;
   }
 
   function updateTask(id, patch) {
@@ -232,9 +228,18 @@
       const actions = row.querySelector('.row-actions');
       if (task.status === 'ready') actions.innerHTML = '<button class="primary-action" type="button" data-action="download">下载</button><button class="delete-action" type="button" data-action="delete">删除</button>';
       else if (task.status === 'generating') actions.innerHTML = '<button class="outline-action" type="button" data-action="cancel">取消生成</button>';
-      else actions.innerHTML = '<button class="outline-action" type="button" data-action="retry">重新生成</button><button class="delete-action" type="button" data-action="delete">删除</button>';
+      else if (['expired', 'cancelled'].includes(task.status)) actions.innerHTML = '<button class="outline-action" type="button" data-action="retry">重新生成</button><button class="delete-action" type="button" data-action="delete">删除</button>';
+      else actions.innerHTML = '<button class="delete-action" type="button" data-action="delete">删除</button>';
       list.appendChild(row);
     });
+  }
+
+  function positionTargetTask() {
+    if (!targetTaskId) return;
+    const target = list.querySelector(`[data-task-id="${CSS.escape(targetTaskId)}"]`);
+    if (!target) return;
+    target.classList.add('is-target');
+    requestAnimationFrame(() => target.scrollIntoView({ block:'center' }));
   }
 
   async function downloadTask(task) {
@@ -311,15 +316,14 @@
     if (task.demo) {
       if (button.dataset.action === 'download') { await downloadTask(task); return; }
       if (button.dataset.action === 'cancel') { demoInteractiveStatus = 'cancelled'; render(); showToast('已取消生成'); return; }
-      if (button.dataset.action === 'retry') { demoInteractiveStatus = 'generating'; render(); showToast('已重新提交生成'); setTimeout(() => { if (demoMode !== 'actual' && demoInteractiveStatus === 'generating') { demoInteractiveStatus = 'ready'; render(); } }, 1800); return; }
+      if (button.dataset.action === 'retry' && ['expired', 'cancelled'].includes(task.status)) { demoInteractiveStatus = 'generating'; render(); showToast('已重新提交生成'); setTimeout(() => { if (demoMode !== 'actual' && demoInteractiveStatus === 'generating') { demoInteractiveStatus = 'ready'; render(); } }, 1800); return; }
       if (button.dataset.action === 'delete') { demoMode = 'empty'; downloadDemoState.value = 'empty'; render(); showToast('已删除下载记录'); return; }
     }
     if (button.dataset.action === 'download') { markDownloadNotificationRead(id); await downloadTask(task); }
-    if (button.dataset.action === 'cancel') { updateTask(id, { status:'cancelled', cancelledAt:new Date().toISOString(), unread:false }); removeDownloadNotification(id); showToast('已取消生成'); }
-    if (button.dataset.action === 'retry') {
+    if (button.dataset.action === 'cancel') { updateTask(id, { status:'cancelled', cancelledAt:new Date().toISOString(), unread:false }); markDownloadNotificationRead(id); showToast('已取消生成'); }
+    if (button.dataset.action === 'retry' && ['expired', 'cancelled'].includes(task.status)) {
       markDownloadNotificationRead(id);
       const retriedTask = updateTask(id, { status:'generating', createdAt:new Date().toISOString(), completedAt:null, expiresAt:null, unread:false });
-      upsertDownloadNotification(retriedTask, 'generating');
       setTimeout(() => finishTask(id), 1800);
       showToast('已重新提交生成');
     }
@@ -332,7 +336,7 @@
     if (!pendingDeleteTask) return;
     const taskId = pendingDeleteTask.id;
     writeTasks(readTasks().filter(item => item.id !== taskId));
-    removeDownloadNotification(taskId);
+    markDownloadNotificationRead(taskId);
     await deleteFile(taskId);
     closeDeleteConfirm({ restoreFocus:false });
     render();
@@ -364,5 +368,6 @@
   const initialTasks = readTasks();
   document.querySelector('#downloadNavDot').hidden = !initialTasks.some(task => task.unread);
   render();
+  positionTargetTask();
   scheduleGeneratingTasks();
 })();

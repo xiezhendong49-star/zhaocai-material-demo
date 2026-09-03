@@ -43,6 +43,11 @@
   background: #9a746c;
 }
 
+.download-row.is-target {
+  background: #fff9df;
+  box-shadow: inset 3px 0 #d99b00;
+}
+
 .download-demo-control select:focus-visible {
   outline: 2px solid #1f6feb;
   outline-offset: 2px;

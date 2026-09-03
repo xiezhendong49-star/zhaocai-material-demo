@@ -12,23 +12,23 @@
 
   const seedMessages = [
     {
-      id:'message-business-approved', type:'business', messageId:'business-approved', tab:'business', unread:true,
+      id:'message-business-approved', type:'business', messageId:'business-approved', tab:'business', unread:true, topUnread:true,
       title:'物料报备申请审核通过',
       description:'您提交的在福华三路项目（测试）的产品报备申请已经审核通过，相关物料已经进入项目资料。项目负责人可继续补充物料参数、报价与使用位置，并在项目协作页面查看后续审核安排。',
       createdAt:'2026-04-15T17:07:37+08:00'
     },
     {
-      id:'message-business-board', type:'business', messageId:'business-board', tab:'business', unread:false,
+      id:'message-business-board', type:'business', messageId:'business-board', tab:'business', unread:false, topUnread:false,
       title:'物料板审核通过', description:'您提交的物料板已经审核通过。', createdAt:'2026-04-14T14:37:02+08:00'
     },
     {
-      id:'message-system-maintenance', type:'system', messageId:'system-maintenance', tab:'system', unread:true,
+      id:'message-system-maintenance', type:'system', messageId:'system-maintenance', tab:'system', unread:true, topUnread:true,
       title:'【兆材云库】平台停服维护通知',
       description:'为进一步优化平台功能，提升设计服务质量与操作体验，平台将于2026-08-28 23:00至次日01:00进行例行维护。系统维护期间将临时关闭网站入口，暂停全部服务，不便之处，敬请谅解。',
       createdAt:'2026-04-15T17:07:37+08:00'
     },
     {
-      id:'message-system-update', type:'system', messageId:'system-update', tab:'system', unread:false,
+      id:'message-system-update', type:'system', messageId:'system-update', tab:'system', unread:false, topUnread:false,
       title:'兆材云库平台新功能推送V2.16',
       description:'物料清单、项目协作及团队空间功能已完成升级。您可以在项目中快速管理物料编号、使用位置与替换方案，提高团队协作效率。',
       createdAt:'2025-09-19T16:36:23+08:00'
@@ -41,15 +41,19 @@
   }
 
   function writeNotifications(notifications) {
-    localStorage.setItem(storageKey, JSON.stringify(notifications.slice(0, 100)));
+    localStorage.setItem(storageKey, JSON.stringify(notifications));
     window.dispatchEvent(new CustomEvent('notifications-updated'));
   }
 
   function ensureMessages() {
     const current = readNotifications();
-    const existingIds = new Set(current.map(item => item.messageId));
+    const migrated = current.map(item => ['business','system'].includes(item.type) && item.topUnread === undefined
+      ? { ...item, topUnread:Boolean(item.unread) }
+      : item);
+    const existingIds = new Set(migrated.map(item => item.messageId));
     const additions = seedMessages.filter(item => !existingIds.has(item.messageId));
-    if (additions.length) writeNotifications([...additions, ...current]);
+    const migrationNeeded = migrated.some((item, index) => item !== current[index]);
+    if (additions.length || migrationNeeded) writeNotifications([...additions, ...migrated]);
   }
 
   function messages() {

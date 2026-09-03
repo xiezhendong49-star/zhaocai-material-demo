@@ -13,7 +13,7 @@
     pending: { disabled:false, action:'generate-demo', label:'生成物料清单', hint:'将根据当前已选物料生成清单，提交后可继续修改。' },
     generating: { disabled:false, action:'download-center', label:'前往下载中心', hint:'该版本正在生成，生成进度请前往下载中心查看。' },
     success: { disabled:false, action:'download-center', label:'前往下载中心', hint:'该版本已生成，请前往下载中心查看或下载。' },
-    failed: { disabled:false, action:'download-center', label:'前往下载中心', hint:'该版本生成失败，请前往下载中心重新生成。' },
+    failed: { disabled:false, action:'generate-demo', label:'重新生成物料清单', hint:'上次生成失败，可重新提交当前版本。' },
     modified: { disabled:false, action:'generate-demo', label:'生成物料清单', hint:'当前清单与已提交版本不一致，请重新生成物料清单。' }
   };
 
@@ -23,11 +23,12 @@
   }
 
   function writeTasks(tasks) {
-    try { localStorage.setItem(taskStorageKey, JSON.stringify(tasks.slice(0, 30))); }
+    try { localStorage.setItem(taskStorageKey, JSON.stringify(tasks)); }
     catch {}
   }
 
   function upsertDownloadNotification(task, status) {
+    if (!['ready', 'failed'].includes(status)) return;
     let notifications = [];
     try { notifications = JSON.parse(localStorage.getItem(notificationStorageKey)) || []; }
     catch {}
@@ -39,7 +40,7 @@
       fileName: task.fileName,
       status,
       createdAt: new Date().toISOString(),
-      unread: status === 'ready' || status === 'failed'
+      topUnread: true
     };
     try {
       localStorage.setItem(notificationStorageKey, JSON.stringify([notification, ...notifications.filter(item => item.taskId !== task.id)]));
@@ -58,7 +59,12 @@
   }
 
   function submittedTask(signature = '') {
-    return readTasks().find(task => ['generating','ready','failed'].includes(task.status) && (!signature || task.snapshotSignature === signature));
+    return readTasks().find(task => {
+      const readyAndAvailable = task.status === 'ready'
+        && (!task.expiresAt || new Date(task.expiresAt).getTime() > Date.now());
+      return (task.status === 'generating' || readyAndAvailable)
+        && (!signature || task.snapshotSignature === signature);
+    });
   }
 
   function openFileDatabase() {
@@ -94,9 +100,9 @@
 
   function snapshotSignature(sources) {
     return JSON.stringify(sources.map(source => ({
-      name: source.name,
+      source: source.url || source.name,
       materials: source.materials.map(item => `${item.id}:${item.group}`).sort()
-    })));
+    })).sort((first, second) => first.source.localeCompare(second.source)));
   }
 
   function currentSnapshot() {
@@ -321,7 +327,13 @@
   function taskFileName() {
     const parts = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
     const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-    return `物料清单_${values.year}-${values.month}-${values.day}_${values.hour}${values.minute}.xlsx`;
+    const baseName = `物料清单_${values.year}-${values.month}-${values.day}_${values.hour}${values.minute}.xlsx`;
+    const usedNames = new Set(readTasks().map(task => task.fileName));
+    if (!usedNames.has(baseName)) return baseName;
+    const stem = baseName.slice(0, -5);
+    let suffix = 1;
+    while (usedNames.has(`${stem}(${suffix}).xlsx`)) suffix += 1;
+    return `${stem}(${suffix}).xlsx`;
   }
 
   async function downloadTask(task) {
@@ -345,7 +357,7 @@
     const demoState = exportStateDemo?.value || 'actual';
     if (demoState !== 'actual') {
       if (demoState === 'empty') return;
-      if (['generating', 'success', 'failed'].includes(demoState)) {
+      if (['generating', 'success'].includes(demoState)) {
         window.open('download-center.html', '_blank', 'noopener');
         return;
       }
@@ -387,9 +399,14 @@
       expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       updateTask(task.id, { status: 'ready', completedAt: completedAt.toISOString(), expiresAt: expiresAt.toISOString(), unread: true });
       upsertDownloadNotification(task, 'ready');
+      if (document.visibilityState === 'visible') {
+        downloadBlob(blob, task.fileName);
+        updateTask(task.id, { downloadedAt: new Date().toISOString(), unread: false });
+        showToast('物料清单已生成并开始下载');
+      }
     } catch (error) {
       console.error('Failed to generate materials list', error);
-      updateTask(task.id, { status: 'failed', error: '生成失败，请重新尝试' });
+      updateTask(task.id, { status: 'failed', error: '生成失败，请返回物料清单重新提交' });
       upsertDownloadNotification(task, 'failed');
     } finally {
       updateExportButton();

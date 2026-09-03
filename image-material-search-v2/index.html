@@ -7,7 +7,7 @@
   <title>图片找物料 - 兆材云库 Demo</title>
   <link rel="stylesheet" href="styles.css?v=20260826-3" />
   <link rel="stylesheet" href="export-feedback.css?v=20260826-2" />
-  <link rel="stylesheet" href="notifications.css?v=20260826-4" />
+  <link rel="stylesheet" href="notifications.css?v=20260903-1" />
 </head>
 <body>
   <header class="site-header">
@@ -35,7 +35,7 @@
           <section class="notification-panel" id="notificationPanel" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" tabindex="-1" hidden>
             <header>
               <strong id="notificationTitle">通知</strong>
-              <button class="notification-clear-read" id="clearReadNotifications" type="button" disabled>清除已读</button>
+              <button class="notification-clear-read" id="markAllNotificationsRead" type="button" disabled>一键已读</button>
             </header>
             <div class="notification-list" id="notificationList" aria-live="polite"></div>
             <nav class="notification-history-links" aria-label="通知历史入口">
@@ -47,7 +47,7 @@
               </div>
             </nav>
             <footer class="notification-demo-controls">
-              <label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无通知</option><option value="generating">生成中</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label>
+              <label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无未读通知</option><option value="generating">生成中（无通知）</option><option value="mixed">多条未读</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">全部已读（空状态）</option></select></label>
             </footer>
           </section>
         </div>
@@ -285,8 +285,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="exceljs.min.js?v=4.4.0"></script>
   <script src="app.js?v=20260826-6"></script>
-  <script src="export-materials.js?v=20260827-1"></script>
-  <script src="notifications.js?v=20260827-1"></script>
+  <script src="export-materials.js?v=20260903-1"></script>
+  <script src="notifications.js?v=20260903-1"></script>
   <script src="./result-pipeline.js?v=20260821-1"></script>
 </body>
 </html>

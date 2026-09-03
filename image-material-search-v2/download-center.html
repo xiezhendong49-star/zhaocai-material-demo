@@ -6,8 +6,8 @@
   <meta name="description" content="兆材云库物料清单下载中心演示" />
   <title>下载中心 - 兆材云库 Demo</title>
   <link rel="stylesheet" href="download-center.css?v=20260825-2" />
-  <link rel="stylesheet" href="download-center-overrides.css?v=20260827-1" />
-  <link rel="stylesheet" href="notifications.css?v=20260826-4" />
+  <link rel="stylesheet" href="download-center-overrides.css?v=20260903-1" />
+  <link rel="stylesheet" href="notifications.css?v=20260903-1" />
 </head>
 <body>
   <header class="account-header">
@@ -27,10 +27,10 @@
           <span class="notification-badge" id="notificationBadge" hidden></span>
         </button>
         <section class="notification-panel" id="notificationPanel" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" tabindex="-1" hidden>
-          <header><strong id="notificationTitle">通知</strong><button class="notification-clear-read" id="clearReadNotifications" type="button" disabled>清除已读</button></header>
+          <header><strong id="notificationTitle">通知</strong><button class="notification-clear-read" id="markAllNotificationsRead" type="button" disabled>一键已读</button></header>
           <div class="notification-list" id="notificationList" aria-live="polite"></div>
           <nav class="notification-history-links" aria-label="通知历史入口"><span>查看历史</span><div><a href="message-center.html" target="_blank" rel="noopener">消息中心</a><i aria-hidden="true"></i><a href="download-center.html" target="_blank" rel="noopener">下载中心</a></div></nav>
-          <footer class="notification-demo-controls"><label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无通知</option><option value="generating">生成中</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label></footer>
+          <footer class="notification-demo-controls"><label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无未读通知</option><option value="generating">生成中（无通知）</option><option value="mixed">多条未读</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">全部已读（空状态）</option></select></label></footer>
         </section>
       </div>
       <span class="account-avatar" aria-label="当前用户">Z</span>
@@ -55,7 +55,7 @@
       <header class="download-heading">
         <div><h1>下载中心</h1><p>导出的文件会保存在这里，下载链接自生成成功起一年内有效</p></div>
         <div class="download-heading-actions">
-          <label class="download-demo-control" for="downloadDemoState"><span>下载状态演示</span><select id="downloadDemoState"><option value="actual">跟随实际状态</option><option value="generating">生成中</option><option value="ready">可下载</option><option value="expired">链接已失效</option><option value="failed">生成失败</option><option value="empty">空状态</option></select></label>
+          <label class="download-demo-control" for="downloadDemoState"><span>下载状态演示</span><select id="downloadDemoState"><option value="actual">跟随实际状态</option><option value="generating">生成中</option><option value="ready">可下载</option><option value="expired">已过期</option><option value="failed">生成失败</option><option value="empty">空状态</option></select></label>
           <a class="demo-return-link" href="index.html?demo=drawer"><span>返回来源页面</span><small>仅供演示</small></a>
         </div>
       </header>
@@ -64,7 +64,7 @@
         <button class="active" type="button" data-status="all" aria-pressed="true">全部 <span>0</span></button>
         <button type="button" data-status="generating" aria-pressed="false">生成中 <span>0</span></button>
         <button type="button" data-status="ready" aria-pressed="false">可下载 <span>0</span></button>
-        <button type="button" data-status="expired" aria-pressed="false">已失效 <span>0</span></button>
+        <button type="button" data-status="expired" aria-pressed="false">已过期 <span>0</span></button>
         <button type="button" data-status="failed" aria-pressed="false">失败 <span>0</span></button>
       </nav>
 
@@ -87,7 +87,7 @@
 
   <div class="download-toast" id="downloadToast" role="status" aria-live="polite"></div>
   <script src="exceljs.min.js?v=4.4.0"></script>
-  <script src="notifications.js?v=20260827-1"></script>
-  <script src="download-center.js?v=20260827-1"></script>
+  <script src="notifications.js?v=20260903-1"></script>
+  <script src="download-center.js?v=20260903-1"></script>
 </body>
 </html>

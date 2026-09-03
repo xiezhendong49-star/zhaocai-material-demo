@@ -6,7 +6,7 @@
   <meta name="description" content="兆材云库消息中心演示" />
   <title>消息中心 - 兆材云库 Demo</title>
   <link rel="stylesheet" href="download-center.css?v=20260825-2" />
-  <link rel="stylesheet" href="notifications.css?v=20260826-4" />
+  <link rel="stylesheet" href="notifications.css?v=20260903-1" />
   <link rel="stylesheet" href="message-center.css?v=20260826-1" />
 </head>
 <body>
@@ -21,10 +21,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/><circle cx="9" cy="11" r="1"/><circle cx="12" cy="11" r="1"/><circle cx="15" cy="11" r="1"/></svg><span class="notification-badge" id="notificationBadge" hidden></span>
         </button>
         <section class="notification-panel" id="notificationPanel" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" tabindex="-1" hidden>
-          <header><strong id="notificationTitle">通知</strong><button class="notification-clear-read" id="clearReadNotifications" type="button" disabled>清除已读</button></header>
+          <header><strong id="notificationTitle">通知</strong><button class="notification-clear-read" id="markAllNotificationsRead" type="button" disabled>一键已读</button></header>
           <div class="notification-list" id="notificationList" aria-live="polite"></div>
           <nav class="notification-history-links" aria-label="通知历史入口"><span>查看历史</span><div><a href="message-center.html" target="_blank" rel="noopener">消息中心</a><i aria-hidden="true"></i><a href="download-center.html" target="_blank" rel="noopener">下载中心</a></div></nav>
-          <footer class="notification-demo-controls"><label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无通知</option><option value="generating">生成中</option><option value="mixed">混合通知</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">已读状态</option></select></label></footer>
+          <footer class="notification-demo-controls"><label for="notificationDemoState"><span>通知演示</span><select id="notificationDemoState"><option value="actual">跟随实际状态</option><option value="empty">无未读通知</option><option value="generating">生成中（无通知）</option><option value="mixed">多条未读</option><option value="success">生成成功</option><option value="failed">生成失败</option><option value="read">全部已读（空状态）</option></select></label></footer>
         </section>
       </div>
       <span class="account-avatar" aria-label="当前用户">Z</span>
@@ -49,7 +49,7 @@
   </div>
 
   <div class="download-toast" id="downloadToast" role="status" aria-live="polite"></div>
-  <script src="notifications.js?v=20260827-1"></script>
-  <script src="message-center.js?v=20260826-2"></script>
+  <script src="notifications.js?v=20260903-1"></script>
+  <script src="message-center.js?v=20260903-1"></script>
 </body>
 </html>
