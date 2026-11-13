@@ -113,7 +113,7 @@
     <form id="preferenceForm">
       <div class="setting-group"><label class="setting-label" for="siteSelect">Site <span>/ 站点</span></label><div class="select-wrap"><svg class="icon"><use href="#i-globe"/></svg><select id="siteSelect"><option value="china">China · 中国站</option><option value="global">Global · 国际站</option><option value="japan">Japan · 日本サイト</option></select><svg class="icon"><use href="#i-chevron"/></svg></div></div>
       <div class="setting-group language-group"><label class="setting-label" id="languageLabel">Language <span>/ 语言</span></label><div class="language-options" id="languageOptions" role="group" aria-labelledby="languageLabel"></div></div>
-      <div class="setting-group currency-group" id="currencyGroup"><label class="setting-label" for="currencySelect">Currency <span>/ 币种</span></label><div class="select-wrap"><span class="currency-sign" id="currencySign">¥</span><select id="currencySelect"><option value="CNY">CNY · 人民币</option><option value="USD">USD · US Dollar</option><option value="EUR">EUR · Euro</option><option value="JPY">JPY · 日本円</option></select><svg class="icon"><use href="#i-chevron"/></svg></div></div>
+      <div class="setting-group currency-group" id="currencyGroup"><label class="setting-label" for="currencySelect">Currency <span>/ 币种</span></label><div class="select-wrap"><span class="currency-sign" id="currencySign">¥</span><select id="currencySelect"></select><svg class="icon"><use href="#i-chevron"/></svg></div></div>
       <div class="panel-foot"><button type="button" class="button light" id="cancelPreferences" aria-label="取消" title="取消"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button><button type="submit" class="button yellow" id="applyPreferences" aria-label="应用设置" title="应用设置"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></button></div>
     </form>
   </section>
@@ -182,11 +182,11 @@ window.DEMO_CATEGORIES = [
   const storage = { get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }, set(key,value) { try { localStorage.setItem(key,JSON.stringify(value)); } catch {} }, remove(key) { try { localStorage.removeItem(key); } catch {} } };
   const KEY = 'ideafusion-language-demo.preferences.v1';
   const DEFAULT = {site:'china',language:'zh',currency:'CNY'};
-  const siteInfo = {china:{label:'China · 中国站',short:'中国站',en:'China site',ja:'中国サイト',defaultLanguage:'zh',languages:['zh','tw','en'],defaultCurrency:'CNY'},global:{label:'Global · 国际站',short:'国际站',en:'Global Site',ja:'グローバルサイト',defaultLanguage:'en',languages:['en'],defaultCurrency:'USD'},japan:{label:'Japan · 日本サイト',short:'日本站',en:'Japan Site',ja:'日本サイト',defaultLanguage:'ja',languages:['ja'],defaultCurrency:'JPY'}};
+  const siteInfo = {china:{label:'China · 中国站',short:'中国站',en:'China site',ja:'中国サイト',defaultLanguage:'zh',languages:['zh','tw','en'],defaultCurrency:'CNY',currencies:['CNY','USD','EUR','GBP','HKD','SGD','JPY']},global:{label:'Global · 国际站',short:'国际站',en:'Global Site',ja:'グローバルサイト',defaultLanguage:'en',languages:['en'],defaultCurrency:'USD',currencies:[]},japan:{label:'Japan · 日本サイト',short:'日本站',en:'Japan Site',ja:'日本サイト',defaultLanguage:'ja',languages:['ja'],defaultCurrency:'JPY',currencies:['SGD','CNY','USD','EUR','GBP','HKD','JPY']}};
   const languages = {zh:'简体中文',tw:'繁體中文',en:'English',ja:'日本語'};
-  const currency = {CNY:{symbol:'¥',rate:1},USD:{symbol:'US$',rate:.14},EUR:{symbol:'€',rate:.13},JPY:{symbol:'JP¥',rate:20}};
+  const currency = {CNY:{symbol:'¥',rate:1,label:'CNY · 人民币'},USD:{symbol:'US$',rate:.14,label:'USD · US Dollar'},EUR:{symbol:'€',rate:.13,label:'EUR · Euro'},GBP:{symbol:'£',rate:.11,label:'GBP · British Pound'},HKD:{symbol:'HK$',rate:1.09,label:'HKD · Hong Kong Dollar'},SGD:{symbol:'S$',rate:.19,label:'SGD · Singapore Dollar'},JPY:{symbol:'JP¥',rate:20,label:'JPY · 日本円'}};
   const valid = (value) => value && siteInfo[value.site] && siteInfo[value.site].languages.includes(value.language) && currency[value.currency];
-  const normalizePrefs = prefs => ({...prefs,currency:prefs.site==='china'?prefs.currency:siteInfo[prefs.site].defaultCurrency});
+  const normalizePrefs = prefs => ({...prefs,currency:siteInfo[prefs.site].currencies.includes(prefs.currency)?prefs.currency:siteInfo[prefs.site].defaultCurrency});
   const saved = storage.get(KEY);
   const state = {prefs:valid(saved)?normalizePrefs(saved):{...DEFAULT},draft:null,query:'',category:'',categoryQuery:'',extra:{},sort:'default',selected:new Set(),favorites:new Set(),detailId:null};
   let toastTimer, lastFocus;
@@ -278,13 +278,15 @@ window.DEMO_CATEGORIES = [
   }
   function renderDraft() {
     const draft=state.draft;
-    const hasCurrency=draft.site==='china';
+    const currencyOptions=siteInfo[draft.site].currencies;
+    const hasCurrency=currencyOptions.length>0;
     $('#preferences').classList.toggle('has-currency',hasCurrency);
     $('#currencyGroup').hidden=!hasCurrency;
     $('#currencySelect').disabled=!hasCurrency;
     $('#languageOptions').style.gridTemplateColumns=`repeat(${siteInfo[draft.site].languages.length},1fr)`;
     $('#languageOptions').innerHTML=siteInfo[draft.site].languages.map(language=>`<button type="button" class="language-choice" data-language="${language}" aria-pressed="${draft.language===language}">${escapeHTML(languages[language])}${draft.language===language?icon('check'):''}</button>`).join('');
     $('#siteSelect').value=draft.site;
+    $('#currencySelect').innerHTML=(hasCurrency?currencyOptions:[siteInfo[draft.site].defaultCurrency]).map(code=>`<option value="${code}">${escapeHTML(currency[code].label)}</option>`).join('');
     $('#currencySelect').value=draft.currency;
     $('#currencySign').textContent=currency[draft.currency].symbol;
     const cancelLabel=t('cancel').split(' / ')[0];
