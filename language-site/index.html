@@ -114,7 +114,7 @@
       <div class="setting-group"><label class="setting-label" for="siteSelect">Site <span>/ 站点</span></label><div class="select-wrap"><svg class="icon"><use href="#i-globe"/></svg><select id="siteSelect"><option value="china">China · 中国站</option><option value="global">Global · 国际站</option><option value="japan">Japan · 日本サイト</option></select><svg class="icon"><use href="#i-chevron"/></svg></div></div>
       <div class="setting-group language-group"><label class="setting-label" id="languageLabel">Language <span>/ 语言</span></label><div class="language-options" id="languageOptions" role="group" aria-labelledby="languageLabel"></div></div>
       <div class="setting-group currency-group" id="currencyGroup"><label class="setting-label" for="currencySelect">Currency <span>/ 币种</span></label><div class="select-wrap"><span class="currency-sign" id="currencySign">¥</span><select id="currencySelect"></select><svg class="icon"><use href="#i-chevron"/></svg></div></div>
-      <div class="panel-foot"><button type="button" class="button light" id="cancelPreferences" aria-label="取消" title="取消"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button><button type="submit" class="button yellow" id="applyPreferences" aria-label="应用设置" title="应用设置"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></button></div>
+      <div class="panel-foot"><button type="button" class="button light" id="cancelPreferences" aria-label="取消" title="取消"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button><button type="button" class="button yellow" id="applyPreferences" aria-label="应用设置" title="应用设置"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></button></div>
     </form>
   </section>
 
@@ -323,6 +323,18 @@ window.DEMO_CATEGORIES = [
     const message=previous.site!==prefs.site?(prefs.site==='global'?'globalApplied':prefs.site==='japan'?'japanApplied':'applied'):reason;
     toast(t(message));$('#preferenceTrigger').focus({preventScroll:true});
   }
+  function confirmPreferences(event) {
+    event.preventDefault();
+    if($('#preferences').hidden)return;
+    const site=$('#siteSelect').value;
+    const info=siteInfo[site];
+    const selectedLanguage=$('#languageOptions [aria-pressed="true"]')?.dataset.language;
+    applyPrefs({
+      site,
+      language:info.languages.includes(selectedLanguage)?selectedLanguage:info.defaultLanguage,
+      currency:$('#currencySelect').value
+    });
+  }
   function clearFilters() {state.query='';state.category='';state.extra={};state.categoryQuery='';$('#materialSearch').value='';$('#categorySearch').value='';renderCategories();renderExtraFilters();renderProducts();}
   function openFilterDrawer() {$('#sidebar').classList.add('mobile-open');$('#mobileScrim').hidden=false;document.body.style.overflow='hidden';$('#closeFilters').focus({preventScroll:true});}
   function closeFilterDrawer() {$('#sidebar').classList.remove('mobile-open');if($('#preferences').hidden){$('#mobileScrim').hidden=true;document.body.style.overflow='';}}
@@ -338,7 +350,8 @@ window.DEMO_CATEGORIES = [
   $('#languageOptions').addEventListener('click',event=>{const button=event.target.closest('[data-language]');if(button){state.draft.language=button.dataset.language;renderDraft();$('#languageOptions').querySelector(`[data-language="${state.draft.language}"]`).focus();}});
   $('#siteSelect').addEventListener('change',event=>{state.draft.site=event.target.value;const info=siteInfo[state.draft.site];if(!info.languages.includes(state.draft.language))state.draft.language=info.defaultLanguage;state.draft.currency=info.defaultCurrency;renderDraft();});
   $('#currencySelect').addEventListener('change',event=>{state.draft.currency=event.target.value;renderDraft();});
-  $('#preferenceForm').addEventListener('submit',event=>{event.preventDefault();applyPrefs(state.draft);});
+  $('#applyPreferences').addEventListener('click',confirmPreferences);
+  $('#preferenceForm').addEventListener('submit',confirmPreferences);
   $('#sitePreviewNotice').addEventListener('click',event=>{if(event.target.closest('#returnChina'))applyPrefs({...DEFAULT});});
   document.addEventListener('pointerdown',event=>{if(!$('#preferences').hidden&&!event.target.closest('#preferences,#preferenceTrigger,#footerPreferences'))closePreferences(false);});
   document.addEventListener('keydown',event=>{
