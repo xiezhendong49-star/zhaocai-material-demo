@@ -57,7 +57,7 @@
       <div class="preference-anchor">
         <button class="preference-trigger" id="preferenceTrigger" aria-haspopup="dialog" aria-controls="preferences" aria-expanded="false">
           <svg class="icon globe"><use href="#i-globe"/></svg>
-          <span class="trigger-copy" id="currentPreference">China · 中国站</span>
+          <span class="trigger-copy" id="currentPreference">China · 中国站 · 简体中文</span>
           <svg class="icon chevron"><use href="#i-chevron"/></svg>
         </button>
       </div>
@@ -256,7 +256,7 @@ window.DEMO_CATEGORIES = [
     document.documentElement.lang={zh:'zh-CN',tw:'zh-TW',en:'en',ja:'ja'}[prefs.language];
     document.title=`${siteName()} · ${t('materials')} | IDEAFUSION Demo`;
     $$('[data-copy]').forEach(element=>element.textContent=t(element.dataset.copy));
-    $('#currentPreference').textContent=prefs.site==='china'?'China · 中国站':`${siteName()} · ${languages[prefs.language]}`;
+    $('#currentPreference').textContent=`${prefs.site==='china'?siteInfo.china.label:siteName()} · ${languages[prefs.language]}`;
     $('#footerStatus').textContent=`${siteInfo[prefs.site].en} · ${languages[prefs.language]} · ${prefs.currency}`;
     $('#materialSearch').placeholder=t('search');
     $('#materialSearch').setAttribute('aria-label',t('search'));
